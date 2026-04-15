@@ -1,0 +1,208 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MiniHBYS.API</name>
+    </assembly>
+    <members>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.GetAll">
+            <summary>Tüm randevuları listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.GetById(System.Int32)">
+            <summary>Id'ye göre randevu getirir.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.GetByDoctorId(System.Int32)">
+            <summary>Doktora ait randevuları listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.GetByPatientId(System.Int32)">
+            <summary>Hastaya ait randevuları listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.Create(MiniHBYS.Core.DTOs.CreateAppointmentDto)">
+             <summary>Yeni randevu oluşturur (30 dk slot çakışma kontrolü ile).</summary>
+             <remarks>
+             Örnek istek:
+            
+                 POST /api/appointments
+                 {
+                   "patientId": 12,
+                   "doctorId": 3,
+                   "dateTime": "2026-04-20T10:30:00Z"
+                 }
+            
+             Aynı doktorun ±30 dakikalık slotunda başka bir randevu varsa 400 döner.
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.UpdateStatus(System.Int32,MiniHBYS.Core.DTOs.UpdateAppointmentStatusDto)">
+             <summary>Randevu durumunu günceller (yalnızca Bekliyor → Tamamlandı/İptal geçişi).</summary>
+             <remarks>
+             Durum değerleri: `0 = Bekliyor`, `1 = Tamamlandı`, `2 = İptal Edildi`.
+            
+             Örnek istek:
+            
+                 PUT /api/appointments/45/status
+                 { "status": 1 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.AppointmentsController.Cancel(System.Int32)">
+            <summary>Randevuyu iptal eder (soft delete).</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DashboardController.GetStats">
+             <summary>Genel sistem istatistiklerini (hasta/doktor/randevu/branş) döner.</summary>
+             <remarks>
+             Örnek yanıt:
+            
+                 {
+                   "success": true,
+                   "data": {
+                     "totalPatients": 124,
+                     "totalDoctors": 18,
+                     "todayAppointments": 9,
+                     "pendingAppointments": 32,
+                     "completedAppointments": 201,
+                     "cancelledAppointments": 14,
+                     "branchStats": [
+                       { "branch": "Kardiyoloji", "doctorCount": 3, "appointmentCount": 42 },
+                       { "branch": "Dahiliye",    "doctorCount": 4, "appointmentCount": 58 }
+                     ]
+                   }
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DoctorsController.GetAll">
+            <summary>Tüm doktorları listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DoctorsController.GetById(System.Int32)">
+            <summary>Id'ye göre doktor getirir.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DoctorsController.GetByBranch(System.String)">
+            <summary>Branşa göre doktorları listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DoctorsController.Create(MiniHBYS.Core.DTOs.CreateDoctorDto)">
+             <summary>Yeni doktor oluşturur.</summary>
+             <remarks>
+             Örnek istek:
+            
+                 POST /api/doctors
+                 {
+                   "name": "Dr. Mehmet Demir",
+                   "branch": "Kardiyoloji",
+                   "email": "mehmet.demir@hastane.com",
+                   "password": "Gecici.123"
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DoctorsController.Update(System.Int32,MiniHBYS.Core.DTOs.UpdateDoctorDto)">
+             <summary>Doktor bilgilerini günceller.</summary>
+             <remarks>
+             Örnek istek:
+            
+                 PUT /api/doctors/3
+                 {
+                   "name": "Dr. Mehmet Demir",
+                   "branch": "Kardiyoloji",
+                   "email": "mehmet.demir@hastane.com"
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.DoctorsController.Delete(System.Int32)">
+            <summary>Doktor kaydını siler (soft delete).</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.MedicalRecordsController.GetAll">
+            <summary>Tüm muayene kayıtlarını listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.MedicalRecordsController.GetByPatient(System.Int32)">
+            <summary>Hastaya ait tüm muayene kayıtlarını listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.MedicalRecordsController.GetByAppointment(System.Int32)">
+            <summary>Bir randevuya ait muayene kaydını getirir.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.MedicalRecordsController.Create(MiniHBYS.Core.DTOs.CreateMedicalRecordDto)">
+             <summary>Tamamlanmış randevuya muayene kaydı oluşturur.</summary>
+             <remarks>
+             Kayıt yalnızca `status = Tamamlandı` olan bir randevu için oluşturulabilir
+             ve aynı randevuya birden fazla kayıt eklenemez.
+            
+             Örnek istek:
+            
+                 POST /api/medical-records
+                 {
+                   "appointmentId": 45,
+                   "diagnosis": "Üst solunum yolu enfeksiyonu",
+                   "notes": "5 gün antibiyotik, bol sıvı. 1 hafta sonra kontrol."
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.MedicalRecordsController.Update(System.Int32,MiniHBYS.Core.DTOs.UpdateMedicalRecordDto)">
+             <summary>Muayene kaydını günceller.</summary>
+             <remarks>
+             Örnek istek:
+            
+                 PUT /api/medical-records/78
+                 {
+                   "diagnosis": "Viral farenjit",
+                   "notes": "Semptomatik tedavi, istirahat."
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.PatientsController.GetAll">
+            <summary>Tüm hastaları listeler.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.PatientsController.GetById(System.Int32)">
+            <summary>Id'ye göre hasta getirir.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.PatientsController.GetByNationalId(System.String)">
+            <summary>TC kimlik numarası ile hasta getirir.</summary>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.PatientsController.Create(MiniHBYS.Core.DTOs.CreatePatientDto)">
+             <summary>Yeni hasta oluşturur.</summary>
+             <remarks>
+             Örnek istek:
+            
+                 POST /api/patients
+                 {
+                   "name": "Ayşe",
+                   "surname": "Yılmaz",
+                   "nationalId": "12345678901",
+                   "birthDate": "1990-05-14",
+                   "phone": "05321234567",
+                   "email": "ayse@example.com"
+                 }
+            
+             Örnek yanıt:
+            
+                 {
+                   "success": true,
+                   "message": "Hasta oluşturuldu.",
+                   "data": {
+                     "id": 12,
+                     "name": "Ayşe",
+                     "surname": "Yılmaz",
+                     "fullName": "Ayşe Yılmaz",
+                     "nationalId": "12345678901",
+                     "birthDate": "1990-05-14T00:00:00",
+                     "phone": "05321234567",
+                     "email": "ayse@example.com",
+                     "createdAt": "2026-04-15T08:30:00Z"
+                   }
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.PatientsController.Update(System.Int32,MiniHBYS.Core.DTOs.UpdatePatientDto)">
+             <summary>Hasta bilgilerini günceller.</summary>
+             <remarks>
+             Örnek istek:
+            
+                 PUT /api/patients/12
+                 {
+                   "name": "Ayşe",
+                   "surname": "Yılmaz",
+                   "birthDate": "1990-05-14",
+                   "phone": "05555551122",
+                   "email": "ayse.yeni@example.com"
+                 }
+             </remarks>
+        </member>
+        <member name="M:MiniHBYS.API.Controllers.PatientsController.Delete(System.Int32)">
+            <summary>Hasta kaydını siler (soft delete).</summary>
+        </member>
+    </members>
+</doc>

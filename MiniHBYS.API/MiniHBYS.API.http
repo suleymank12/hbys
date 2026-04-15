@@ -1,0 +1,6 @@
+@MiniHBYS.API_HostAddress = http://localhost:5273
+
+GET {{MiniHBYS.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

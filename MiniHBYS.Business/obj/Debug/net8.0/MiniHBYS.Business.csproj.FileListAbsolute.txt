@@ -1,0 +1,17 @@
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.Business.deps.json
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.Business.dll
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.Business.pdb
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.Core.dll
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.DataAccess.dll
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.Core.pdb
+D:\HBYSproje\MiniHBYS.Business\bin\Debug\net8.0\MiniHBYS.DataAccess.pdb
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.csproj.AssemblyReference.cache
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.GeneratedMSBuildEditorConfig.editorconfig
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.AssemblyInfoInputs.cache
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.AssemblyInfo.cs
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.csproj.CoreCompileInputs.cache
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.5273F39C.Up2Date
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.dll
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\refint\MiniHBYS.Business.dll
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\MiniHBYS.Business.pdb
+D:\HBYSproje\MiniHBYS.Business\obj\Debug\net8.0\ref\MiniHBYS.Business.dll
