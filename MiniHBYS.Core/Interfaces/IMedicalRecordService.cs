@@ -4,8 +4,7 @@ namespace MiniHBYS.Core.Interfaces;
 
 public interface IMedicalRecordService
 {
-    Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetAllAsync();
-    // Already declared above; kept for visibility.
+    Task<ApiResponse<PagedResult<MedicalRecordDto>>> GetAllAsync(int page = 1, int pageSize = 20);
     Task<ApiResponse<MedicalRecordDto>> GetByIdAsync(int id);
     Task<ApiResponse<MedicalRecordDto>> GetByAppointmentIdAsync(int appointmentId);
     Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetByPatientIdAsync(int patientId);

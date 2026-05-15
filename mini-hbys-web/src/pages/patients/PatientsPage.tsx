@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipboardList, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import toast from "react-hot-toast";
 import { Button } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
+import { Pagination } from "../../components/ui/Pagination";
 import { patientService } from "../../services/patientService";
 import type {
   CreatePatientDto,
@@ -17,22 +18,53 @@ import { useAuth } from "../../contexts/AuthContext";
 import { ExportButton } from "../../components/ui/ExportButton";
 import { exportService } from "../../services/exportService";
 
+const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function PatientsPage() {
   const { hasRole } = useAuth();
   const canWrite = hasRole("Admin", "Sekreter");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<Patient | null>(null);
+  const debounceTimer = useRef<number | null>(null);
 
-  const load = async () => {
+  useEffect(() => {
+    if (debounceTimer.current !== null) {
+      window.clearTimeout(debounceTimer.current);
+    }
+    debounceTimer.current = window.setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceTimer.current !== null) {
+        window.clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [search]);
+
+  const load = async (currentPage = page, currentSearch = debouncedSearch) => {
     setLoading(true);
     try {
-      setPatients(await patientService.list());
+      const result = await patientService.list({
+        page: currentPage,
+        pageSize: PAGE_SIZE,
+        search: currentSearch || undefined,
+      });
+      setPatients(result.items);
+      setTotalCount(result.totalCount);
+      setTotalPages(result.totalPages);
     } catch {
       /* toast handled by interceptor */
     } finally {
@@ -41,19 +73,9 @@ export function PatientsPage() {
   };
 
   useEffect(() => {
-    load();
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase("tr-TR");
-    if (!q) return patients;
-    return patients.filter(
-      (p) =>
-        p.fullName.toLocaleLowerCase("tr-TR").includes(q) ||
-        p.nationalId.includes(q) ||
-        p.protocolNumber.toLocaleLowerCase("tr-TR").includes(q)
-    );
-  }, [patients, search]);
+    load(page, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch]);
 
   const openCreate = () => {
     setEditing(null);
@@ -98,6 +120,8 @@ export function PatientsPage() {
       setDeleting(false);
     }
   };
+
+  const hasNoResults = !loading && patients.length === 0;
 
   return (
     <div className="space-y-5">
@@ -150,15 +174,15 @@ export function PatientsPage() {
                     ))}
                   </tr>
                 ))
-              ) : filtered.length === 0 ? (
+              ) : hasNoResults ? (
                 <tr>
                   <td colSpan={8} className="px-5 py-16 text-center text-slate-500">
                     <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-                    {search ? "Aramayla eşleşen hasta bulunamadı." : "Henüz hasta kaydı yok."}
+                    {debouncedSearch ? "Aramayla eşleşen hasta bulunamadı." : "Henüz hasta kaydı yok."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((p) => (
+                patients.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3.5 text-medical-700 font-mono text-xs tabular-nums">
                       {p.protocolNumber}
@@ -220,10 +244,14 @@ export function PatientsPage() {
           </table>
         </div>
 
-        {!loading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500 bg-slate-50/50">
-            Toplam {filtered.length} hasta
-          </div>
+        {!loading && totalCount > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={setPage}
+            itemLabel="hasta"
+          />
         )}
       </div>
 

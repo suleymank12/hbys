@@ -37,8 +37,8 @@ public class ExportController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ExportPatients()
     {
-        var result = await _patients.GetAllAsync();
-        var data = result.Data ?? Array.Empty<PatientDto>();
+        var result = await _patients.GetAllAsync(page: 1, pageSize: int.MaxValue);
+        var data = (IEnumerable<PatientDto>?)result.Data?.Items ?? Array.Empty<PatientDto>();
 
         var columns = new List<ExcelColumn<PatientDto>>
         {
@@ -77,8 +77,8 @@ public class ExportController : ControllerBase
         }
         else
         {
-            var r = await _appointments.GetAllAsync();
-            all = r.Data ?? Array.Empty<AppointmentDto>();
+            var r = await _appointments.GetAllAsync(page: 1, pageSize: int.MaxValue);
+            all = (IEnumerable<AppointmentDto>?)r.Data?.Items ?? Array.Empty<AppointmentDto>();
         }
 
         var data = FilterByDate(all, a => a.DateTime, startDate, endDate)
@@ -122,8 +122,8 @@ public class ExportController : ControllerBase
         }
         else
         {
-            var r = await _medicalRecords.GetAllAsync();
-            all = r.Data ?? Array.Empty<MedicalRecordDto>();
+            var r = await _medicalRecords.GetAllAsync(page: 1, pageSize: int.MaxValue);
+            all = (IEnumerable<MedicalRecordDto>?)r.Data?.Items ?? Array.Empty<MedicalRecordDto>();
         }
 
         var data = FilterByDate(all, m => m.AppointmentDate, startDate, endDate)

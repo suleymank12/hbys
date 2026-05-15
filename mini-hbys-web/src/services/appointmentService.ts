@@ -4,6 +4,7 @@ import type {
   Appointment,
   AppointmentStatus,
   CreateAppointmentDto,
+  PagedResult,
   UpdateAppointmentStatusDto,
 } from "../types";
 
@@ -14,9 +15,18 @@ const unwrap = <T,>(res: ApiResponse<T>): T => {
   return res.data;
 };
 
+export interface AppointmentListParams {
+  page?: number;
+  pageSize?: number;
+}
+
 export const appointmentService = {
-  list: async (): Promise<Appointment[]> => {
-    const { data } = await apiClient.get<ApiResponse<Appointment[]>>("/appointments");
+  list: async (params: AppointmentListParams = {}): Promise<PagedResult<Appointment>> => {
+    const { page = 1, pageSize = 20 } = params;
+    const { data } = await apiClient.get<ApiResponse<PagedResult<Appointment>>>(
+      "/appointments",
+      { params: { page, pageSize } }
+    );
     return unwrap(data);
   },
   listByDoctor: async (doctorId: number): Promise<Appointment[]> => {

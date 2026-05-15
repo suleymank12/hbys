@@ -20,12 +20,36 @@ public class PatientService : IPatientService
         _audit = audit;
     }
 
-    public async Task<ApiResponse<IEnumerable<PatientDto>>> GetAllAsync()
+    public async Task<ApiResponse<PagedResult<PatientDto>>> GetAllAsync(int page = 1, int pageSize = 20, string? search = null)
     {
-        var list = await _context.Patients.AsNoTracking()
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var query = _context.Patients.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var q = search.Trim().ToLower();
+            query = query.Where(p =>
+                p.Name.ToLower().Contains(q) ||
+                p.Surname.ToLower().Contains(q) ||
+                p.NationalId.Contains(q) ||
+                p.ProtocolNumber.ToLower().Contains(q));
+        }
+
+        var total = await query.CountAsync();
+
+        var list = await query
             .OrderBy(p => p.Name).ThenBy(p => p.Surname)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
-        return ApiResponse<IEnumerable<PatientDto>>.Ok(_mapper.Map<IEnumerable<PatientDto>>(list));
+
+        var paged = PagedResult<PatientDto>.Create(
+            _mapper.Map<List<PatientDto>>(list),
+            total, page, pageSize);
+
+        return ApiResponse<PagedResult<PatientDto>>.Ok(paged);
     }
 
     public async Task<ApiResponse<PatientDto>> GetByIdAsync(int id)

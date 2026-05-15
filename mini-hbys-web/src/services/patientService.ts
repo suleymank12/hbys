@@ -2,6 +2,7 @@ import { apiClient } from "./apiClient";
 import type {
   ApiResponse,
   CreatePatientDto,
+  PagedResult,
   Patient,
   UpdatePatientDto,
 } from "../types";
@@ -13,9 +14,21 @@ const unwrap = <T,>(res: ApiResponse<T>): T => {
   return res.data;
 };
 
+export interface PatientListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
 export const patientService = {
-  list: async (): Promise<Patient[]> => {
-    const { data } = await apiClient.get<ApiResponse<Patient[]>>("/patients");
+  list: async (params: PatientListParams = {}): Promise<PagedResult<Patient>> => {
+    const { page = 1, pageSize = 20, search } = params;
+    const query: Record<string, string | number> = { page, pageSize };
+    if (search && search.trim().length > 0) query.search = search.trim();
+    const { data } = await apiClient.get<ApiResponse<PagedResult<Patient>>>(
+      "/patients",
+      { params: query }
+    );
     return unwrap(data);
   },
   create: async (dto: CreatePatientDto): Promise<Patient> => {

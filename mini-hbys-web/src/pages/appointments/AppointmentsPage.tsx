@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { Button } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { DatePicker } from "../../components/ui/DatePicker";
+import { Pagination } from "../../components/ui/Pagination";
 import { Select } from "../../components/ui/Select";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { appointmentService } from "../../services/appointmentService";
@@ -158,6 +159,10 @@ const formatWeekLabel = (weekStart: Date): string => {
 const toDateInputValue = (d: Date) => format(d, "yyyy-MM-dd");
 const toTimeInputValue = (d: Date) => format(d, "HH:mm");
 
+const LIST_PAGE_SIZE = 20;
+const CALENDAR_FETCH_SIZE = 10000;
+const FORM_PATIENT_FETCH_SIZE = 10000;
+
 export function AppointmentsPage() {
   const { user, hasRole } = useAuth();
   const isDoctor = hasRole("Doktor");
@@ -188,22 +193,36 @@ export function AppointmentsPage() {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMonday(new Date()));
   const [detailTarget, setDetailTarget] = useState<Appointment | null>(null);
 
-  const load = async () => {
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const load = async (
+    currentPage = page,
+    currentView: ViewMode = viewMode
+  ) => {
     setLoading(true);
     try {
       if (isDoctor && user?.doctorId) {
+        // Doctor scope is naturally bounded — no pagination needed.
         const a = await appointmentService.listByDoctor(user.doctorId);
         setAppointments(a);
+        setTotalCount(a.length);
+        setTotalPages(1);
         setPatients([]);
         setDoctors([]);
       } else {
-        const [a, p, d] = await Promise.all([
-          appointmentService.list(),
-          patientService.list(),
+        const fetchSize = currentView === "calendar" ? CALENDAR_FETCH_SIZE : LIST_PAGE_SIZE;
+        const fetchPage = currentView === "calendar" ? 1 : currentPage;
+        const [aResult, pResult, d] = await Promise.all([
+          appointmentService.list({ page: fetchPage, pageSize: fetchSize }),
+          patientService.list({ page: 1, pageSize: FORM_PATIENT_FETCH_SIZE }),
           doctorService.list(),
         ]);
-        setAppointments(a);
-        setPatients(p);
+        setAppointments(aResult.items);
+        setTotalCount(aResult.totalCount);
+        setTotalPages(aResult.totalPages);
+        setPatients(pResult.items);
         setDoctors(d);
       }
     } catch {
@@ -214,9 +233,16 @@ export function AppointmentsPage() {
   };
 
   useEffect(() => {
-    load();
+    setPage(1);
+    load(1, viewMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDoctor, user?.doctorId]);
+  }, [isDoctor, user?.doctorId, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== "list") return;
+    load(page, "list");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const doctorOptions = useMemo(
     () => [
@@ -469,10 +495,20 @@ export function AppointmentsPage() {
           </table>
         </div>
 
-        {!loading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500 bg-slate-50/50">
-            Toplam {filtered.length} randevu
-          </div>
+        {!loading && totalCount > 0 && (
+          isDoctor ? (
+            <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500 bg-slate-50/50">
+              Toplam {filtered.length} randevu
+            </div>
+          ) : (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              onPageChange={setPage}
+              itemLabel="randevu"
+            />
+          )
         )}
       </div>
       )}

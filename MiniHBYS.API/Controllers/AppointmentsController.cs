@@ -21,10 +21,13 @@ public class AppointmentsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Tüm randevuları listeler.</summary>
+    /// <summary>Randevuları sayfalı şekilde listeler.</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<AppointmentDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20) =>
+        Ok(await _service.GetAllAsync(page, pageSize));
 
     /// <summary>Id'ye göre randevu getirir.</summary>
     [HttpGet("{id:int}")]

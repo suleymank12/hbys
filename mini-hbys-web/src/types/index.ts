@@ -26,6 +26,14 @@ export interface ApiResponse<T> {
   errors?: string[] | null;
 }
 
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface LoginDto {
   email: string;
   password: string;

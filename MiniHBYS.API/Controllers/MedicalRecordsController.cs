@@ -20,11 +20,13 @@ public class MedicalRecordsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Tüm muayene kayıtlarını listeler.</summary>
+    /// <summary>Muayene kayıtlarını sayfalı şekilde listeler.</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MedicalRecordDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll() =>
-        Ok(await _service.GetAllAsync());
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<MedicalRecordDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20) =>
+        Ok(await _service.GetAllAsync(page, pageSize));
 
     /// <summary>Hastaya ait tüm muayene kayıtlarını listeler.</summary>
     [HttpGet("patient/{patientId:int}")]

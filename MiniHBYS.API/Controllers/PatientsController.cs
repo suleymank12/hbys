@@ -21,10 +21,14 @@ public class PatientsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Tüm hastaları listeler.</summary>
+    /// <summary>Hastaları sayfalı şekilde listeler. Opsiyonel arama: ad, soyad, TC, protokol no üzerinde.</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<PatientDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null) =>
+        Ok(await _service.GetAllAsync(page, pageSize, search));
 
     /// <summary>Id'ye göre hasta getirir.</summary>
     [HttpGet("{id:int}")]

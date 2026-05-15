@@ -5,7 +5,7 @@ namespace MiniHBYS.Core.Interfaces;
 
 public interface IAppointmentService
 {
-    Task<ApiResponse<IEnumerable<AppointmentDto>>> GetAllAsync();
+    Task<ApiResponse<PagedResult<AppointmentDto>>> GetAllAsync(int page = 1, int pageSize = 20);
     Task<ApiResponse<AppointmentDto>> GetByIdAsync(int id);
     Task<ApiResponse<IEnumerable<AppointmentDto>>> GetByPatientIdAsync(int patientId);
     Task<ApiResponse<IEnumerable<AppointmentDto>>> GetByDoctorIdAsync(int doctorId);

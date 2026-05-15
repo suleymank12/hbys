@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   CreateMedicalRecordDto,
   MedicalRecord,
+  PagedResult,
   UpdateMedicalRecordDto,
 } from "../types";
 
@@ -13,10 +14,17 @@ const unwrap = <T,>(res: ApiResponse<T>): T => {
   return res.data;
 };
 
+export interface MedicalRecordListParams {
+  page?: number;
+  pageSize?: number;
+}
+
 export const medicalRecordService = {
-  getAll: async (): Promise<MedicalRecord[]> => {
-    const { data } = await apiClient.get<ApiResponse<MedicalRecord[]>>(
-      "/medical-records"
+  getAll: async (params: MedicalRecordListParams = {}): Promise<PagedResult<MedicalRecord>> => {
+    const { page = 1, pageSize = 20 } = params;
+    const { data } = await apiClient.get<ApiResponse<PagedResult<MedicalRecord>>>(
+      "/medical-records",
+      { params: { page, pageSize } }
     );
     return unwrap(data);
   },

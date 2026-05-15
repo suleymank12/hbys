@@ -9,11 +9,13 @@ public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly IHostEnvironment _env;
 
-    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger, IHostEnvironment env)
     {
         _next = next;
         _logger = logger;
+        _env = env;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -30,7 +32,8 @@ public class GlobalExceptionMiddleware
 
     private async Task HandleAsync(HttpContext context, Exception ex)
     {
-        _logger.LogError(ex, "Yakalanmamış istisna: {Path}", context.Request.Path);
+        var traceId = context.TraceIdentifier;
+        _logger.LogError(ex, "Yakalanmamış istisna: {Path} | TraceId: {TraceId}", context.Request.Path, traceId);
 
         var (status, message, errors) = ex switch
         {
@@ -42,17 +45,19 @@ public class GlobalExceptionMiddleware
             KeyNotFoundException => (
                 HttpStatusCode.NotFound,
                 "Kayıt bulunamadı.",
-                new List<string> { ex.Message }
+                BuildErrorDetails(ex, traceId)
             ),
             UnauthorizedAccessException => (
                 HttpStatusCode.Unauthorized,
                 "Yetkisiz erişim.",
-                new List<string> { ex.Message }
+                BuildErrorDetails(ex, traceId)
             ),
             _ => (
                 HttpStatusCode.InternalServerError,
-                "Beklenmeyen bir hata oluştu.",
-                new List<string> { ex.Message }
+                _env.IsDevelopment()
+                    ? "Beklenmeyen bir hata oluştu."
+                    : $"Sunucu hatası oluştu. Referans: {traceId}",
+                BuildErrorDetails(ex, traceId)
             )
         };
 
@@ -63,6 +68,19 @@ public class GlobalExceptionMiddleware
 
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
+    }
+
+    private List<string> BuildErrorDetails(Exception ex, string traceId)
+    {
+        if (_env.IsDevelopment())
+        {
+            var details = new List<string> { ex.Message };
+            if (!string.IsNullOrEmpty(ex.StackTrace))
+                details.Add(ex.StackTrace);
+            return details;
+        }
+
+        return new List<string> { $"Referans: {traceId}" };
     }
 }
 

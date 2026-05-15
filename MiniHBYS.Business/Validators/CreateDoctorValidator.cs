@@ -21,6 +21,10 @@ public class CreateDoctorValidator : AbstractValidator<CreateDoctorDto>
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Şifre alanı boş olamaz.")
-            .MinimumLength(6).WithMessage("Şifre en az 6 karakter olmalıdır.");
+            .MinimumLength(10).WithMessage("Şifre en az 10 karakter olmalıdır.")
+            .Matches("[A-Z]").WithMessage("Şifre en az bir büyük harf içermelidir.")
+            .Matches("[a-z]").WithMessage("Şifre en az bir küçük harf içermelidir.")
+            .Matches("[0-9]").WithMessage("Şifre en az bir rakam içermelidir.")
+            .Matches("[^a-zA-Z0-9]").WithMessage("Şifre en az bir özel karakter içermelidir.");
     }
 }

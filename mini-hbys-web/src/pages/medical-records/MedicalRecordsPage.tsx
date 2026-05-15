@@ -11,6 +11,7 @@ import {
 import { format, isToday, isYesterday } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "../../components/ui/Button";
+import { Pagination } from "../../components/ui/Pagination";
 import { medicalRecordService } from "../../services/medicalRecordService";
 import { AppointmentStatus, type Appointment, type MedicalRecord } from "../../types";
 import { MedicalRecordModal } from "../appointments/MedicalRecordModal";
@@ -20,6 +21,7 @@ import { exportService } from "../../services/exportService";
 
 const DIAGNOSIS_MAX = 60;
 const COMPLAINT_MAX = 40;
+const PAGE_SIZE = 20;
 
 const truncate = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
@@ -50,6 +52,9 @@ export function MedicalRecordsPage() {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [modalTarget, setModalTarget] = useState<Appointment | null>(null);
   const [modalReadonly, setModalReadonly] = useState(false);
 
@@ -63,14 +68,24 @@ export function MedicalRecordsPage() {
     setModalTarget(recordToAppointment(r));
   };
 
-  const load = async () => {
+  const load = async (currentPage = page) => {
     setLoading(true);
     try {
-      const data =
-        isDoctor && user?.doctorId
-          ? await medicalRecordService.getByDoctor(user.doctorId)
-          : await medicalRecordService.getAll();
-      setRecords(data);
+      if (isDoctor && user?.doctorId) {
+        // Doctor scope is naturally bounded.
+        const data = await medicalRecordService.getByDoctor(user.doctorId);
+        setRecords(data);
+        setTotalCount(data.length);
+        setTotalPages(1);
+      } else {
+        const result = await medicalRecordService.getAll({
+          page: currentPage,
+          pageSize: PAGE_SIZE,
+        });
+        setRecords(result.items);
+        setTotalCount(result.totalCount);
+        setTotalPages(result.totalPages);
+      }
     } catch {
       /* interceptor */
     } finally {
@@ -79,9 +94,16 @@ export function MedicalRecordsPage() {
   };
 
   useEffect(() => {
-    load();
+    setPage(1);
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDoctor, user?.doctorId]);
+
+  useEffect(() => {
+    if (isDoctor && user?.doctorId) return;
+    load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("tr-TR");
@@ -136,7 +158,7 @@ export function MedicalRecordsPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-medical-50
                           border border-medical-100 text-medical-700 text-xs font-medium">
             <FileText className="w-3.5 h-3.5" />
-            Toplam {filtered.length} kayıt
+            Toplam {totalCount} kayıt
           </div>
         </div>
       </div>
@@ -276,10 +298,20 @@ export function MedicalRecordsPage() {
           </table>
         </div>
 
-        {!loading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500 bg-slate-50/50">
-            Toplam {filtered.length} muayene kaydı
-          </div>
+        {!loading && totalCount > 0 && (
+          isDoctor ? (
+            <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500 bg-slate-50/50">
+              Toplam {filtered.length} muayene kaydı
+            </div>
+          ) : (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              onPageChange={setPage}
+              itemLabel="muayene kaydı"
+            />
+          )
         )}
       </div>
 
@@ -288,7 +320,7 @@ export function MedicalRecordsPage() {
         appointment={modalTarget}
         readonly={modalReadonly}
         onClose={() => setModalTarget(null)}
-        onSaved={load}
+        onSaved={() => load()}
       />
     </div>
   );

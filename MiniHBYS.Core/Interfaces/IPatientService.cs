@@ -4,7 +4,7 @@ namespace MiniHBYS.Core.Interfaces;
 
 public interface IPatientService
 {
-    Task<ApiResponse<IEnumerable<PatientDto>>> GetAllAsync();
+    Task<ApiResponse<PagedResult<PatientDto>>> GetAllAsync(int page = 1, int pageSize = 20, string? search = null);
     Task<ApiResponse<PatientDto>> GetByIdAsync(int id);
     Task<ApiResponse<PatientDto>> GetByNationalIdAsync(string nationalId);
     Task<ApiResponse<PatientDto>> CreateAsync(CreatePatientDto dto);

@@ -23,10 +23,25 @@ public class AppointmentService : IAppointmentService
         _audit = audit;
     }
 
-    public async Task<ApiResponse<IEnumerable<AppointmentDto>>> GetAllAsync()
+    public async Task<ApiResponse<PagedResult<AppointmentDto>>> GetAllAsync(int page = 1, int pageSize = 20)
     {
-        var list = await BaseQuery().OrderByDescending(a => a.DateTime).ToListAsync();
-        return ApiResponse<IEnumerable<AppointmentDto>>.Ok(_mapper.Map<IEnumerable<AppointmentDto>>(list));
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var query = BaseQuery();
+        var total = await query.CountAsync();
+
+        var list = await query
+            .OrderByDescending(a => a.DateTime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var paged = PagedResult<AppointmentDto>.Create(
+            _mapper.Map<List<AppointmentDto>>(list),
+            total, page, pageSize);
+
+        return ApiResponse<PagedResult<AppointmentDto>>.Ok(paged);
     }
 
     public async Task<ApiResponse<AppointmentDto>> GetByIdAsync(int id)

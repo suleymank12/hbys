@@ -94,7 +94,7 @@ public static class DbSeeder
     {
         var systemUsers = new (string Name, string Email, string Password, UserRole Role)[]
         {
-            ("Sistem Yöneticisi", "admin@minihbys.com",    "Admin123!",    UserRole.Admin),
+            ("Sistem Yöneticisi", "admin@minihbys.com",    "Admin1234!",   UserRole.Admin),
             ("Sekreter",          "sekreter@minihbys.com", "Sekreter123!", UserRole.Sekreter)
         };
 

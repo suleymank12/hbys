@@ -21,10 +21,25 @@ public class MedicalRecordService : IMedicalRecordService
         _audit = audit;
     }
 
-    public async Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetAllAsync()
+    public async Task<ApiResponse<PagedResult<MedicalRecordDto>>> GetAllAsync(int page = 1, int pageSize = 20)
     {
-        var list = await BaseQuery().OrderByDescending(m => m.CreatedAt).ToListAsync();
-        return ApiResponse<IEnumerable<MedicalRecordDto>>.Ok(_mapper.Map<IEnumerable<MedicalRecordDto>>(list));
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var query = BaseQuery();
+        var total = await query.CountAsync();
+
+        var list = await query
+            .OrderByDescending(m => m.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var paged = PagedResult<MedicalRecordDto>.Create(
+            _mapper.Map<List<MedicalRecordDto>>(list),
+            total, page, pageSize);
+
+        return ApiResponse<PagedResult<MedicalRecordDto>>.Ok(paged);
     }
 
     public async Task<ApiResponse<MedicalRecordDto>> GetByIdAsync(int id)
