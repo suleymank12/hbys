@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -11,24 +11,29 @@ import {
   FileText,
   HeartPulse,
   Pill,
+  Search,
   Stethoscope,
+  Tag,
   Thermometer,
   User,
   Weight,
   Wind,
+  X,
 } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { TextArea } from "../../components/ui/TextArea";
 import { medicalRecordService } from "../../services/medicalRecordService";
+import { icd10Service } from "../../services/icd10Service";
 import { useAuth } from "../../contexts/AuthContext";
-import type { Appointment, MedicalRecord, VitalSigns } from "../../types";
+import type { Appointment, Icd10Code, MedicalRecord, VitalSigns } from "../../types";
 
 interface FormValues {
   chiefComplaint: string;
   history: string;
   examination: string;
   diagnosis: string;
+  diagnosisCode: string;
   treatmentPlan: string;
   notes: string;
   systolic: string;
@@ -88,6 +93,8 @@ export function MedicalRecordModal({
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>();
 
@@ -128,6 +135,7 @@ export function MedicalRecordModal({
         history: values.history.trim() || null,
         examination: values.examination.trim() || null,
         diagnosis: values.diagnosis.trim(),
+        diagnosisCode: values.diagnosisCode.trim() || null,
         treatmentPlan: values.treatmentPlan.trim() || null,
         notes: values.notes.trim() || null,
         vitalSigns: hasAnyVital(vitals) ? vitals : null,
@@ -291,17 +299,43 @@ export function MedicalRecordModal({
             />
           </Section>
 
-          <Section title="Tanı" icon={<HeartPulse className="w-4 h-4" />}>
-            <TextArea
-              label=""
-              rows={2}
-              placeholder="Örn: Üst solunum yolu enfeksiyonu"
-              error={errors.diagnosis?.message}
-              {...register("diagnosis", {
-                required: "Tanı zorunludur.",
-                maxLength: { value: 500, message: "En fazla 500 karakter." },
-              })}
+          <Section title="Tanı (ICD-10)" icon={<HeartPulse className="w-4 h-4" />}>
+            <Icd10Search
+              onSelect={(c) => {
+                setValue("diagnosisCode", c.code, { shouldDirty: true });
+                setValue("diagnosis", c.nameTr, { shouldDirty: true });
+              }}
             />
+
+            {watch("diagnosisCode") && (
+              <div className="mt-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-medical-50 border border-medical-200 text-medical-800 text-xs font-medium">
+                  <Tag className="w-3 h-3" />
+                  <span className="font-mono">{watch("diagnosisCode")}</span>
+                  <button
+                    type="button"
+                    onClick={() => setValue("diagnosisCode", "", { shouldDirty: true })}
+                    className="ml-0.5 -mr-0.5 hover:text-rose-600 transition-colors"
+                    aria-label="ICD-10 kodunu kaldır"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              </div>
+            )}
+
+            <div className="mt-2">
+              <TextArea
+                label=""
+                rows={2}
+                placeholder="Tanı açıklaması — ICD-10 seçtiğinizde otomatik dolar, isterseniz düzenleyebilirsiniz."
+                error={errors.diagnosis?.message}
+                {...register("diagnosis", {
+                  required: "Tanı zorunludur.",
+                  maxLength: { value: 500, message: "En fazla 500 karakter." },
+                })}
+              />
+            </div>
           </Section>
 
           <Section title="Tedavi Planı" icon={<Pill className="w-4 h-4" />}>
@@ -342,6 +376,7 @@ function emptyValues(): FormValues {
     history: "",
     examination: "",
     diagnosis: "",
+    diagnosisCode: "",
     treatmentPlan: "",
     notes: "",
     systolic: "",
@@ -362,6 +397,7 @@ function toFormValues(r: MedicalRecord): FormValues {
     history: r.history ?? "",
     examination: r.examination ?? "",
     diagnosis: r.diagnosis ?? "",
+    diagnosisCode: r.diagnosisCode ?? "",
     treatmentPlan: r.treatmentPlan ?? "",
     notes: r.notes ?? "",
     systolic: strOrEmpty(v?.bloodPressureSystolic),
@@ -460,7 +496,12 @@ function ReadonlyView({
       <ReadonlySoap label="Başvuru Şikayeti" value={record.chiefComplaint} required />
       <ReadonlySoap label="Anamnez" value={record.history ?? ""} />
       <ReadonlySoap label="Fizik Muayene" value={record.examination ?? ""} />
-      <ReadonlySoap label="Tanı" value={record.diagnosis} required />
+      <ReadonlySoap
+        label="Tanı"
+        value={record.diagnosis}
+        code={record.diagnosisCode}
+        required
+      />
       <ReadonlySoap label="Tedavi Planı" value={record.treatmentPlan ?? ""} />
       <ReadonlySoap label="Ek Notlar" value={record.notes ?? ""} />
 
@@ -476,16 +517,24 @@ function ReadonlyView({
 function ReadonlySoap({
   label,
   value,
+  code,
   required,
 }: {
   label: string;
   value: string;
+  code?: string | null;
   required?: boolean;
 }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wider font-semibold text-medical-700 mb-1.5">
+      <div className="text-[11px] uppercase tracking-wider font-semibold text-medical-700 mb-1.5 flex items-center gap-2">
         {label}
+        {code && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-medical-100 text-medical-800 normal-case tracking-normal">
+            <Tag className="w-2.5 h-2.5" />
+            {code}
+          </span>
+        )}
       </div>
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-800 whitespace-pre-wrap break-words min-h-[2.5rem]">
         {value.trim() ? value : <span className="text-slate-400">{required ? "—" : "Girilmedi"}</span>}
@@ -644,6 +693,110 @@ function InfoItem({
         <div className="text-sm font-medium text-slate-900 truncate">{value}</div>
         {sub && <div className="text-xs text-slate-500">{sub}</div>}
       </div>
+    </div>
+  );
+}
+
+function Icd10Search({
+  onSelect,
+}: {
+  onSelect: (code: Icd10Code) => void;
+}) {
+  const [term, setTerm] = useState("");
+  const [results, setResults] = useState<Icd10Code[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Debounced search
+  useEffect(() => {
+    const trimmed = term.trim();
+    if (trimmed.length < 1) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const id = window.setTimeout(async () => {
+      try {
+        const items = await icd10Service.search(trimmed);
+        setResults(items);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [term]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <input
+          type="text"
+          value={term}
+          onChange={(e) => {
+            setTerm(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="ICD-10 kodu veya Türkçe tanı adı ile ara..."
+          className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 bg-white
+                     focus:outline-none focus:ring-2 focus:ring-medical-500/30 focus:border-medical-500
+                     transition-colors"
+        />
+      </div>
+      {open && (loading || results.length > 0 || term.trim().length >= 1) && (
+        <div className="absolute z-30 mt-1 w-full bg-white rounded-lg shadow-lg border border-slate-200 max-h-72 overflow-y-auto animate-[modalIn_0.12s_ease-out]">
+          {loading && (
+            <div className="px-3 py-2.5 text-xs text-slate-500 flex items-center gap-2">
+              <span className="w-3 h-3 border-2 border-medical-500 border-t-transparent rounded-full animate-spin" />
+              Aranıyor...
+            </div>
+          )}
+          {!loading && results.length === 0 && term.trim().length >= 1 && (
+            <div className="px-3 py-2.5 text-xs text-slate-500">Eşleşen kod bulunamadı.</div>
+          )}
+          {!loading &&
+            results.map((r) => (
+              <button
+                key={r.code}
+                type="button"
+                onClick={() => {
+                  onSelect(r);
+                  setTerm("");
+                  setResults([]);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-medical-50 transition-colors border-b border-slate-50 last:border-0"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="font-mono font-semibold text-medical-700 shrink-0 mt-0.5">
+                    {r.code}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-slate-800 break-words">{r.nameTr}</div>
+                    <div className="text-[11px] text-slate-400 truncate">{r.category}</div>
+                  </div>
+                </div>
+              </button>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

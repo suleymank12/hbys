@@ -14,6 +14,7 @@ import {
   Pill,
   ShieldCheck,
   Stethoscope,
+  Tag,
   Thermometer,
   User,
   Weight,
@@ -346,6 +347,7 @@ function TimelineItem({ record }: { record: MedicalRecord }) {
         <SoapBlock
           label="Tanı"
           value={record.diagnosis}
+          code={record.diagnosisCode}
           icon={<HeartPulse className="w-3 h-3" />}
           highlight
         />
@@ -389,11 +391,13 @@ function VitalChip({
 function SoapBlock({
   label,
   value,
+  code,
   icon,
   highlight,
 }: {
   label: string;
   value: string;
+  code?: string | null;
   icon: React.ReactNode;
   highlight?: boolean;
 }) {
@@ -402,6 +406,12 @@ function SoapBlock({
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400 font-medium mb-1">
         {icon}
         {label}
+        {code && (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-medical-100 text-medical-800 normal-case tracking-normal">
+            <Tag className="w-2.5 h-2.5" />
+            {code}
+          </span>
+        )}
       </div>
       <p
         className={`text-sm whitespace-pre-wrap break-words ${

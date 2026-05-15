@@ -81,6 +81,7 @@ public class MedicalRecordService : IMedicalRecordService
             History = dto.History,
             Examination = dto.Examination,
             Diagnosis = dto.Diagnosis,
+            DiagnosisCode = string.IsNullOrWhiteSpace(dto.DiagnosisCode) ? null : dto.DiagnosisCode.Trim(),
             TreatmentPlan = dto.TreatmentPlan,
             Notes = dto.Notes,
             CreatedAt = DateTime.UtcNow,
@@ -114,6 +115,7 @@ public class MedicalRecordService : IMedicalRecordService
         entity.History = dto.History;
         entity.Examination = dto.Examination;
         entity.Diagnosis = dto.Diagnosis;
+        entity.DiagnosisCode = string.IsNullOrWhiteSpace(dto.DiagnosisCode) ? null : dto.DiagnosisCode.Trim();
         entity.TreatmentPlan = dto.TreatmentPlan;
         entity.Notes = dto.Notes;
         entity.UpdatedAt = DateTime.UtcNow;

@@ -185,6 +185,13 @@ export interface UpdateAppointmentStatusDto {
   status: AppointmentStatus;
 }
 
+export interface Icd10Code {
+  code: string;
+  nameTr: string;
+  nameEn?: string | null;
+  category: string;
+}
+
 export interface VitalSigns {
   bloodPressureSystolic?: number | null;
   bloodPressureDiastolic?: number | null;
@@ -207,6 +214,7 @@ export interface MedicalRecord {
   history?: string | null;
   examination?: string | null;
   diagnosis: string;
+  diagnosisCode?: string | null;
   treatmentPlan?: string | null;
   notes?: string | null;
   vitalSigns?: VitalSigns | null;
@@ -219,6 +227,7 @@ export interface CreateMedicalRecordDto {
   history?: string | null;
   examination?: string | null;
   diagnosis: string;
+  diagnosisCode?: string | null;
   treatmentPlan?: string | null;
   notes?: string | null;
   vitalSigns?: VitalSigns | null;
@@ -229,6 +238,7 @@ export interface UpdateMedicalRecordDto {
   history?: string | null;
   examination?: string | null;
   diagnosis: string;
+  diagnosisCode?: string | null;
   treatmentPlan?: string | null;
   notes?: string | null;
   vitalSigns?: VitalSigns | null;

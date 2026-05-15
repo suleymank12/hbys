@@ -13,6 +13,7 @@ public static class DbSeeder
 
         await SeedSystemUsersAsync(context);
         await SeedDoctorsAsync(context);
+        await SeedIcd10CodesAsync(context);
 
         if (await context.Patients.AnyAsync())
             return;
@@ -183,23 +184,23 @@ public static class DbSeeder
 
     private static List<MedicalRecord> SeedMedicalRecords(List<Appointment> appointments)
     {
-        var diagnoses = new (string Complaint, string Diagnosis, string? Plan)[]
+        var diagnoses = new (string Complaint, string Diagnosis, string? Code, string? Plan)[]
         {
-            ("Boğaz ağrısı ve burun akıntısı",       "Üst solunum yolu enfeksiyonu",  "Bol sıvı tüketimi, istirahat önerildi."),
-            ("Baş dönmesi, ense ağrısı",             "Hipertansiyon",                 "Tansiyon takibi, tuz kısıtlaması."),
-            ("Uzağı net görememe şikayeti",          "Miyopi",                        "Gözlük reçetesi düzenlendi."),
-            ("Öksürük ve hırıltı, 5 gündür",         "Akut bronşit",                  "7 gün antibiyotik kürü başlandı."),
-            ("Tek taraflı zonklayıcı baş ağrısı",    "Migren",                        "Tetikleyici faktörlerin kaydı istendi."),
-            ("Sık idrara çıkma, susama",             "Tip 2 Diyabet",                 "Diyet ve metformin önerildi."),
-            ("Bel ağrısı, bacağa vuran",             "Lomber disk hernisi",           "Fizik tedavi programına yönlendirildi."),
-            ("Mide yanması, ekşime",                 "Gastrit",                       "Proton pompa inhibitörü başlandı."),
-            ("Kulak ağrısı, çocukta ateş",           "Otitis media",                  "5 gün antibiyotik ve ağrı kesici."),
-            ("Hapşırma, burun kaşıntısı",            "Alerjik rinit",                 "Antihistaminik önerildi."),
-            ("Halsizlik, çabuk yorulma",             "Anemi",                         "Demir takviyesi başlandı."),
-            ("Yutkunma güçlüğü, ateş",               "Tonsillit",                     "Antibiyotik ve gargara önerildi."),
-            ("Gözde kızarıklık ve çapaklanma",       "Konjonktivit",                  "Antibiyotik damla verildi."),
-            ("Göz yorgunluğu, baş ağrısı",           "Astenopi",                      "Ekran süresi azaltılması önerildi."),
-            ("Kalçadan bacağa yayılan ağrı",         "Siyatalji",                     "Kas gevşetici ve istirahat."),
+            ("Boğaz ağrısı ve burun akıntısı",       "Akut üst solunum yolu enfeksiyonu, tanımlanmamış", "J06.9", "Bol sıvı tüketimi, istirahat önerildi."),
+            ("Baş dönmesi, ense ağrısı",             "Esansiyel (primer) hipertansiyon",                 "I10",   "Tansiyon takibi, tuz kısıtlaması."),
+            ("Uzağı net görememe şikayeti",          "Miyopi",                                           "H52.1", "Gözlük reçetesi düzenlendi."),
+            ("Öksürük ve hırıltı, 5 gündür",         "Akut bronşit, tanımlanmamış",                      "J20.9", "7 gün antibiyotik kürü başlandı."),
+            ("Tek taraflı zonklayıcı baş ağrısı",    "Migren, tanımlanmamış",                            "G43.9", "Tetikleyici faktörlerin kaydı istendi."),
+            ("Sık idrara çıkma, susama",             "Tip 2 diabetes mellitus (komplikasyonsuz)",        "E11.9", "Diyet ve metformin önerildi."),
+            ("Bel ağrısı, bacağa vuran",             "Bel ağrısı",                                       "M54.5", "Fizik tedavi programına yönlendirildi."),
+            ("Mide yanması, ekşime",                 "Gastrit, tanımlanmamış",                           "K29.7", "Proton pompa inhibitörü başlandı."),
+            ("Kulak ağrısı, çocukta ateş",           "Otitis media, tanımlanmamış",                      "H66.9", "5 gün antibiyotik ve ağrı kesici."),
+            ("Hapşırma, burun kaşıntısı",            "Vazomotor ve allerjik rinit",                      "J30.9", "Antihistaminik önerildi."),
+            ("Halsizlik, çabuk yorulma",             "Demir eksikliği anemisi, tanımlanmamış",           "D50.9", "Demir takviyesi başlandı."),
+            ("Yutkunma güçlüğü, ateş",               "Kronik tonsillit",                                 "J35.0", "Antibiyotik ve gargara önerildi."),
+            ("Gözde kızarıklık ve çapaklanma",       "Konjonktivit, tanımlanmamış",                      "H10.9", "Antibiyotik damla verildi."),
+            ("Göz yorgunluğu, baş ağrısı",           "Gerilim tipi baş ağrısı",                          "G44.2", "Ekran süresi azaltılması önerildi."),
+            ("Kalçadan bacağa yayılan ağrı",         "Lomber disk hernisi",                              "M51.1", "Kas gevşetici ve istirahat."),
         };
 
         var completed = appointments.Where(a => a.Status == AppointmentStatus.Tamamlandi).Take(15).ToList();
@@ -212,10 +213,117 @@ public static class DbSeeder
                 Appointment = completed[i],
                 ChiefComplaint = diagnoses[i].Complaint,
                 Diagnosis = diagnoses[i].Diagnosis,
+                DiagnosisCode = diagnoses[i].Code,
                 TreatmentPlan = diagnoses[i].Plan
             });
         }
 
         return records;
+    }
+
+    private static async Task SeedIcd10CodesAsync(AppDbContext context)
+    {
+        var data = new (string Code, string NameTr, string? NameEn, string Category)[]
+        {
+            // J00-J06 Akut üst solunum yolu enfeksiyonları
+            ("J00",   "Akut nazofarenjit (soğuk algınlığı)",                       "Acute nasopharyngitis (common cold)",   "J00-J06 Akut üst solunum yolu enfeksiyonları"),
+            ("J02.9", "Akut farenjit, tanımlanmamış",                              "Acute pharyngitis, unspecified",        "J00-J06 Akut üst solunum yolu enfeksiyonları"),
+            ("J03.9", "Akut tonsillit, tanımlanmamış",                             "Acute tonsillitis, unspecified",        "J00-J06 Akut üst solunum yolu enfeksiyonları"),
+            ("J06.9", "Akut üst solunum yolu enfeksiyonu, tanımlanmamış",          "Acute upper respiratory infection",     "J00-J06 Akut üst solunum yolu enfeksiyonları"),
+            // J20-J22 Akut alt solunum yolu enfeksiyonları
+            ("J18.9", "Pnömoni, tanımlanmamış",                                    "Pneumonia, unspecified",                "J09-J18 Grip ve pnömoni"),
+            ("J20.9", "Akut bronşit, tanımlanmamış",                               "Acute bronchitis, unspecified",         "J20-J22 Akut alt solunum yolu enfeksiyonları"),
+            // J30-J39 Üst solunum yolu diğer hastalıkları
+            ("J30.9", "Vazomotor ve allerjik rinit",                               "Allergic rhinitis",                     "J30-J39 Üst solunum yolu diğer hastalıkları"),
+            ("J35.0", "Kronik tonsillit",                                          "Chronic tonsillitis",                   "J30-J39 Üst solunum yolu diğer hastalıkları"),
+            ("J35.1", "Tonsil hipertrofisi",                                       "Hypertrophy of tonsils",                "J30-J39 Üst solunum yolu diğer hastalıkları"),
+            // J40-J47 Kronik alt solunum yolu hastalıkları
+            ("J45.9", "Astım, tanımlanmamış",                                      "Asthma, unspecified",                   "J40-J47 Kronik alt solunum yolu hastalıkları"),
+            // I10-I15 Hipertansif hastalıklar
+            ("I10",   "Esansiyel (primer) hipertansiyon",                          "Essential hypertension",                "I10-I15 Hipertansif hastalıklar"),
+            // I20-I25 İskemik kalp hastalıkları
+            ("I25.9", "Kronik iskemik kalp hastalığı, tanımlanmamış",              "Chronic ischemic heart disease",        "I20-I25 İskemik kalp hastalıkları"),
+            // I50 Kalp yetmezliği
+            ("I50.9", "Kalp yetmezliği, tanımlanmamış",                            "Heart failure, unspecified",            "I50 Kalp yetmezliği"),
+            // E00-E07 Tiroid bozuklukları
+            ("E03.9", "Hipotiroidi, tanımlanmamış",                                "Hypothyroidism, unspecified",           "E00-E07 Tiroid bozuklukları"),
+            // E10-E14 Diabetes mellitus
+            ("E11.9", "Tip 2 diabetes mellitus (komplikasyonsuz)",                 "Type 2 diabetes mellitus",              "E10-E14 Diabetes mellitus"),
+            // E70-E78 Metabolizma bozuklukları
+            ("E78.5", "Hiperlipidemi, tanımlanmamış",                              "Hyperlipidemia, unspecified",           "E70-E90 Metabolizma bozuklukları"),
+            // F30-F48 Duygudurum / nevrotik bozukluklar
+            ("F32.9", "Depresif episod, tanımlanmamış",                            "Depressive episode, unspecified",       "F30-F39 Duygudurum bozuklukları"),
+            ("F41.1", "Yaygın anksiyete bozukluğu",                                "Generalized anxiety disorder",          "F40-F48 Nevrotik bozukluklar"),
+            ("F41.9", "Anksiyete bozukluğu, tanımlanmamış",                        "Anxiety disorder, unspecified",         "F40-F48 Nevrotik bozukluklar"),
+            // G40-G47 Episodik ve paroksismal bozukluklar
+            ("G43.9", "Migren, tanımlanmamış",                                     "Migraine, unspecified",                 "G40-G47 Episodik bozukluklar"),
+            ("G44.2", "Gerilim tipi baş ağrısı",                                   "Tension-type headache",                 "G40-G47 Episodik bozukluklar"),
+            ("G47.0", "Uyku başlama ve sürdürme bozukluğu (insomnia)",             "Insomnia",                              "G40-G47 Episodik bozukluklar"),
+            // H10-H13 Konjonktiva
+            ("H10.9", "Konjonktivit, tanımlanmamış",                               "Conjunctivitis, unspecified",           "H10-H13 Konjonktiva bozuklukları"),
+            // H52 Refraksiyon bozuklukları
+            ("H52.0", "Hipermetropi",                                              "Hypermetropia",                         "H52 Akomodasyon ve refraksiyon"),
+            ("H52.1", "Miyopi",                                                    "Myopia",                                "H52 Akomodasyon ve refraksiyon"),
+            ("H52.2", "Astigmatizm",                                               "Astigmatism",                           "H52 Akomodasyon ve refraksiyon"),
+            // H65-H75 Orta kulak
+            ("H66.9", "Otitis media, tanımlanmamış",                               "Otitis media, unspecified",             "H65-H75 Orta kulak hastalıkları"),
+            // K20-K31 Özofagus/mide/duodenum
+            ("K21.9", "Gastroözofageal reflü hastalığı (özofajitsiz)",             "GERD without esophagitis",              "K20-K31 Özofagus, mide ve duodenum"),
+            ("K29.7", "Gastrit, tanımlanmamış",                                    "Gastritis, unspecified",                "K20-K31 Özofagus, mide ve duodenum"),
+            ("K30",   "Fonksiyonel dispepsi",                                      "Functional dyspepsia",                  "K20-K31 Özofagus, mide ve duodenum"),
+            // K50-K52 Enteritler/kolitler
+            ("K52.9", "Non-enfeksiyöz gastroenterit ve kolit, tanımlanmamış",      "Noninfective gastroenteritis",          "K50-K52 Non-enfeksiyöz enteritler"),
+            // K55-K63 Bağırsağın diğer hastalıkları
+            ("K59.0", "Konstipasyon",                                              "Constipation",                          "K55-K63 Bağırsağın diğer hastalıkları"),
+            // M40-M54 Dorsopatiler
+            ("M51.1", "Lomber disk hernisi",                                       "Lumbar disc displacement",              "M40-M54 Dorsopatiler"),
+            ("M54.2", "Servikalji (boyun ağrısı)",                                 "Cervicalgia",                           "M40-M54 Dorsopatiler"),
+            ("M54.5", "Bel ağrısı",                                                "Low back pain",                         "M40-M54 Dorsopatiler"),
+            // M70-M79 Yumuşak doku
+            ("M25.5", "Eklem ağrısı",                                              "Pain in joint",                         "M00-M25 Artropatiler"),
+            ("M79.1", "Myalji",                                                    "Myalgia",                               "M70-M79 Yumuşak doku hastalıkları"),
+            // N20-N23 Ürolitiazis
+            ("N20.0", "Böbrek taşı",                                               "Calculus of kidney",                    "N20-N23 Ürolitiazis"),
+            // N30-N39 Üriner sistem
+            ("N39.0", "İdrar yolu enfeksiyonu, lokalizasyonu tanımlanmamış",       "Urinary tract infection",               "N30-N39 Üriner sistemin diğer hastalıkları"),
+            // L20-L30 Dermatit / egzama
+            ("L20.9", "Atopik dermatit, tanımlanmamış",                            "Atopic dermatitis, unspecified",        "L20-L30 Dermatit ve egzama"),
+            ("L23.9", "Kontakt dermatit, tanımlanmamış",                           "Contact dermatitis, unspecified",       "L20-L30 Dermatit ve egzama"),
+            // L70-L75 Cilt ekleri
+            ("L70.0", "Akne vulgaris",                                             "Acne vulgaris",                         "L70-L75 Cilt ekleri bozuklukları"),
+            // D50-D53 Beslenme anemileri
+            ("D50.9", "Demir eksikliği anemisi, tanımlanmamış",                    "Iron deficiency anemia, unspecified",   "D50-D53 Beslenme anemileri"),
+            // B25-B34 Diğer viral hastalıklar
+            ("B34.9", "Viral enfeksiyon, tanımlanmamış",                           "Viral infection, unspecified",          "B25-B34 Diğer viral hastalıklar"),
+            // R semptomlar
+            ("R05",   "Öksürük",                                                   "Cough",                                 "R00-R09 Dolaşım/solunum semptomları"),
+            ("R07.4", "Göğüs ağrısı, tanımlanmamış",                               "Chest pain, unspecified",               "R00-R09 Dolaşım/solunum semptomları"),
+            ("R10.4", "Karın ağrısı, diğer ve tanımlanmamış",                      "Abdominal pain, unspecified",           "R10-R19 Sindirim sistemi semptomları"),
+            ("R11",   "Bulantı ve kusma",                                          "Nausea and vomiting",                   "R10-R19 Sindirim sistemi semptomları"),
+            ("R42",   "Baş dönmesi ve sersemlik",                                  "Dizziness and giddiness",               "R40-R46 Genel duyusal semptomlar"),
+            ("R50.9", "Ateş, tanımlanmamış",                                       "Fever, unspecified",                    "R50-R69 Genel semptomlar"),
+            ("R51",   "Baş ağrısı",                                                "Headache",                              "R50-R69 Genel semptomlar"),
+            ("R53",   "Halsizlik ve yorgunluk",                                    "Malaise and fatigue",                   "R50-R69 Genel semptomlar"),
+            // Z genel sağlık
+            ("Z00.0", "Genel sağlık muayenesi",                                    "General medical examination",           "Z00-Z13 Sağlık taraması ve muayenesi"),
+            // T78
+            ("T78.4", "Alerji, tanımlanmamış",                                     "Allergy, unspecified",                  "T78 Yan etkiler"),
+        };
+
+        var existing = await context.Icd10Codes.Select(c => c.Code).ToListAsync();
+        var existingSet = new HashSet<string>(existing);
+
+        foreach (var d in data)
+        {
+            if (existingSet.Contains(d.Code)) continue;
+            await context.Icd10Codes.AddAsync(new Icd10Code
+            {
+                Code = d.Code,
+                NameTr = d.NameTr,
+                NameEn = d.NameEn,
+                Category = d.Category
+            });
+        }
+        await context.SaveChangesAsync();
     }
 }

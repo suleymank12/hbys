@@ -7,6 +7,7 @@ public class MedicalRecord : BaseEntity
     public string? History { get; set; }
     public string? Examination { get; set; }
     public string Diagnosis { get; set; } = string.Empty;
+    public string? DiagnosisCode { get; set; }
     public string? TreatmentPlan { get; set; }
     public string? Notes { get; set; }
 

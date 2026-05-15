@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
     public DbSet<VitalSigns> VitalSigns => Set<VitalSigns>();
+    public DbSet<Icd10Code> Icd10Codes => Set<Icd10Code>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +87,7 @@ public class AppDbContext : DbContext
             b.Property(m => m.History).HasMaxLength(2000);
             b.Property(m => m.Examination).HasMaxLength(2000);
             b.Property(m => m.Diagnosis).IsRequired().HasMaxLength(500);
+            b.Property(m => m.DiagnosisCode).HasMaxLength(10);
             b.Property(m => m.TreatmentPlan).HasMaxLength(2000);
 
             b.HasOne(m => m.Appointment)
@@ -95,6 +97,16 @@ public class AppDbContext : DbContext
 
             b.HasIndex(m => m.AppointmentId).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<Icd10Code>(b =>
+        {
+            b.HasKey(c => c.Code);
+            b.Property(c => c.Code).HasMaxLength(10).ValueGeneratedNever();
+            b.Property(c => c.NameTr).IsRequired().HasMaxLength(500);
+            b.Property(c => c.NameEn).HasMaxLength(500);
+            b.Property(c => c.Category).IsRequired().HasMaxLength(200);
+            b.HasIndex(c => c.NameTr);
         });
 
         modelBuilder.Entity<VitalSigns>(b =>

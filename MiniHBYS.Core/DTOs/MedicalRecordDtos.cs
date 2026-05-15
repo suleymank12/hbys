@@ -24,6 +24,7 @@ public class MedicalRecordDto
     public string? History { get; set; }
     public string? Examination { get; set; }
     public string Diagnosis { get; set; } = string.Empty;
+    public string? DiagnosisCode { get; set; }
     public string? TreatmentPlan { get; set; }
     public string? Notes { get; set; }
     public VitalSignsDto? VitalSigns { get; set; }
@@ -37,6 +38,7 @@ public class CreateMedicalRecordDto
     public string? History { get; set; }
     public string? Examination { get; set; }
     public string Diagnosis { get; set; } = string.Empty;
+    public string? DiagnosisCode { get; set; }
     public string? TreatmentPlan { get; set; }
     public string? Notes { get; set; }
     public VitalSignsDto? VitalSigns { get; set; }
@@ -48,6 +50,7 @@ public class UpdateMedicalRecordDto
     public string? History { get; set; }
     public string? Examination { get; set; }
     public string Diagnosis { get; set; } = string.Empty;
+    public string? DiagnosisCode { get; set; }
     public string? TreatmentPlan { get; set; }
     public string? Notes { get; set; }
     public VitalSignsDto? VitalSigns { get; set; }

@@ -28,6 +28,7 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IIcd10Service, Icd10Service>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 

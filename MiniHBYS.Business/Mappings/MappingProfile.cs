@@ -59,6 +59,7 @@ public class MappingProfile : Profile
             .ForMember(d => d.VitalSigns,
                 o => o.MapFrom(s => s.VitalSigns));
         CreateMap<VitalSigns, VitalSignsDto>();
+        CreateMap<Icd10Code, Icd10CodeDto>();
         CreateMap<CreateMedicalRecordDto, MedicalRecord>()
             .ForMember(d => d.VitalSigns, o => o.Ignore());
         CreateMap<UpdateMedicalRecordDto, MedicalRecord>()

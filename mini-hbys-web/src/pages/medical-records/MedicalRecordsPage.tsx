@@ -6,6 +6,7 @@ import {
   Pencil,
   Search,
   Stethoscope,
+  Tag,
 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -207,9 +208,17 @@ export function MedicalRecordsPage() {
                           <div className="text-xs text-slate-500">{r.doctorBranch}</div>
                         </td>
                         <td className="px-5 py-3.5 text-slate-700 max-w-[360px]">
-                          <span title={r.diagnosis.length > DIAGNOSIS_MAX ? r.diagnosis : undefined}>
-                            {truncate(r.diagnosis, DIAGNOSIS_MAX)}
-                          </span>
+                          <div className="flex items-start gap-1.5">
+                            {r.diagnosisCode && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-medical-100 text-medical-800 shrink-0 mt-0.5">
+                                <Tag className="w-2.5 h-2.5" />
+                                {r.diagnosisCode}
+                              </span>
+                            )}
+                            <span title={r.diagnosis.length > DIAGNOSIS_MAX ? r.diagnosis : undefined}>
+                              {truncate(r.diagnosis, DIAGNOSIS_MAX)}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-5 py-3.5 text-slate-600 max-w-[280px]">
                           {complaint ? (
