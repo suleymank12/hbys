@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
     public DbSet<VitalSigns> VitalSigns => Set<VitalSigns>();
     public DbSet<Icd10Code> Icd10Codes => Set<Icd10Code>();
+    public DbSet<Prescription> Prescriptions => Set<Prescription>();
+    public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,6 +109,36 @@ public class AppDbContext : DbContext
             b.Property(c => c.NameEn).HasMaxLength(500);
             b.Property(c => c.Category).IsRequired().HasMaxLength(200);
             b.HasIndex(c => c.NameTr);
+        });
+
+        modelBuilder.Entity<Prescription>(b =>
+        {
+            b.Property(p => p.PrescriptionNumber).IsRequired().HasMaxLength(20);
+            b.HasIndex(p => p.PrescriptionNumber).IsUnique();
+
+            b.HasOne(p => p.MedicalRecord)
+                .WithOne(m => m.Prescription!)
+                .HasForeignKey<Prescription>(p => p.MedicalRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(p => p.MedicalRecordId).IsUnique();
+            b.HasQueryFilter(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<PrescriptionItem>(b =>
+        {
+            b.Property(i => i.MedicationName).IsRequired().HasMaxLength(200);
+            b.Property(i => i.Dosage).IsRequired().HasMaxLength(100);
+            b.Property(i => i.Frequency).IsRequired().HasMaxLength(100);
+            b.Property(i => i.Duration).IsRequired().HasMaxLength(100);
+            b.Property(i => i.Instructions).HasMaxLength(500);
+
+            b.HasOne(i => i.Prescription)
+                .WithMany(p => p.Items)
+                .HasForeignKey(i => i.PrescriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasQueryFilter(e => e.IsActive);
         });
 
         modelBuilder.Entity<VitalSigns>(b =>

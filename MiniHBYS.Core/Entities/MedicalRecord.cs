@@ -13,4 +13,5 @@ public class MedicalRecord : BaseEntity
 
     public Appointment Appointment { get; set; } = null!;
     public VitalSigns? VitalSigns { get; set; }
+    public Prescription? Prescription { get; set; }
 }

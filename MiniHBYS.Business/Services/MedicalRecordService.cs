@@ -208,5 +208,6 @@ public class MedicalRecordService : IMedicalRecordService
         _context.MedicalRecords.AsNoTracking()
             .Include(m => m.Appointment).ThenInclude(a => a.Patient)
             .Include(m => m.Appointment).ThenInclude(a => a.Doctor)
-            .Include(m => m.VitalSigns);
+            .Include(m => m.VitalSigns)
+            .Include(m => m.Prescription!).ThenInclude(p => p.Items);
 }

@@ -28,6 +28,7 @@ public class MedicalRecordDto
     public string? TreatmentPlan { get; set; }
     public string? Notes { get; set; }
     public VitalSignsDto? VitalSigns { get; set; }
+    public PrescriptionDto? Prescription { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

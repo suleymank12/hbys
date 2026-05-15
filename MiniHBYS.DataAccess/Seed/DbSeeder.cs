@@ -33,6 +33,61 @@ public static class DbSeeder
         var records = SeedMedicalRecords(appointments);
         await context.MedicalRecords.AddRangeAsync(records);
         await context.SaveChangesAsync();
+
+        await SeedSamplePrescriptionsAsync(context, records);
+    }
+
+    private static async Task SeedSamplePrescriptionsAsync(AppDbContext context, List<MedicalRecord> records)
+    {
+        if (await context.Prescriptions.AnyAsync()) return;
+
+        // İlk 5 tamamlanmış muayene kaydına örnek reçete ekle.
+        var samples = new (string Diagnosis, List<PrescriptionItem> Items)[]
+        {
+            ("Akut üst solunum yolu enfeksiyonu, tanımlanmamış", new List<PrescriptionItem>
+            {
+                new() { MedicationName = "Parol 500 mg tablet",      Dosage = "500 mg", Frequency = "Günde 3 kez", Duration = "5 gün", Instructions = "Yemeklerden sonra" },
+                new() { MedicationName = "Augmentin 1000 mg tablet", Dosage = "1000 mg", Frequency = "Günde 2 kez", Duration = "7 gün", Instructions = "Aç karnına" }
+            }),
+            ("Esansiyel (primer) hipertansiyon", new List<PrescriptionItem>
+            {
+                new() { MedicationName = "Coversyl 5 mg tablet", Dosage = "5 mg", Frequency = "Günde 1 kez (sabah)", Duration = "30 gün" },
+                new() { MedicationName = "Norvasc 5 mg tablet",  Dosage = "5 mg", Frequency = "Günde 1 kez (akşam)", Duration = "30 gün" }
+            }),
+            ("Akut bronşit, tanımlanmamış", new List<PrescriptionItem>
+            {
+                new() { MedicationName = "Klacid 500 mg tablet",  Dosage = "500 mg", Frequency = "Günde 2 kez", Duration = "7 gün",  Instructions = "Yemekle birlikte" },
+                new() { MedicationName = "Bisolvon şurup",        Dosage = "10 ml",  Frequency = "Günde 3 kez", Duration = "5 gün" }
+            }),
+            ("Tip 2 diabetes mellitus (komplikasyonsuz)", new List<PrescriptionItem>
+            {
+                new() { MedicationName = "Glucophage 1000 mg tablet", Dosage = "1000 mg", Frequency = "Günde 2 kez", Duration = "90 gün", Instructions = "Yemeklerle birlikte" }
+            }),
+            ("Bel ağrısı", new List<PrescriptionItem>
+            {
+                new() { MedicationName = "Voltaren 75 mg tablet", Dosage = "75 mg", Frequency = "Günde 2 kez", Duration = "10 gün", Instructions = "Yemeklerden sonra" },
+                new() { MedicationName = "Myolastan tablet",      Dosage = "1 tablet", Frequency = "Yatmadan önce", Duration = "10 gün" }
+            }),
+        };
+
+        var counter = 1;
+        foreach (var sample in samples)
+        {
+            var record = records.FirstOrDefault(r => r.Diagnosis == sample.Diagnosis);
+            if (record is null) continue;
+
+            await context.Prescriptions.AddAsync(new Prescription
+            {
+                MedicalRecord = record,
+                PrescriptionNumber = $"RX-{counter:D6}",
+                PrescribedAt = record.CreatedAt,
+                Items = sample.Items,
+                CreatedAt = record.CreatedAt,
+                IsActive = true
+            });
+            counter++;
+        }
+        await context.SaveChangesAsync();
     }
 
     private static async Task SeedSystemUsersAsync(AppDbContext context)

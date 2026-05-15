@@ -185,6 +185,44 @@ export interface UpdateAppointmentStatusDto {
   status: AppointmentStatus;
 }
 
+export interface PrescriptionItem {
+  id?: number;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string | null;
+}
+
+export interface Prescription {
+  id: number;
+  medicalRecordId: number;
+  prescriptionNumber: string;
+  prescribedAt: string;
+  patientFullName: string;
+  doctorName: string;
+  doctorBranch: string;
+  createdAt: string;
+  items: PrescriptionItem[];
+}
+
+export interface CreatePrescriptionItemDto {
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string | null;
+}
+
+export interface CreatePrescriptionDto {
+  medicalRecordId: number;
+  items: CreatePrescriptionItemDto[];
+}
+
+export interface UpdatePrescriptionDto {
+  items: CreatePrescriptionItemDto[];
+}
+
 export interface Icd10Code {
   code: string;
   nameTr: string;
@@ -218,6 +256,7 @@ export interface MedicalRecord {
   treatmentPlan?: string | null;
   notes?: string | null;
   vitalSigns?: VitalSigns | null;
+  prescription?: Prescription | null;
   createdAt: string;
 }
 

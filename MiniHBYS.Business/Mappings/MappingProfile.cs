@@ -57,9 +57,26 @@ public class MappingProfile : Profile
             .ForMember(d => d.AppointmentDate,
                 o => o.MapFrom(s => s.Appointment != null ? s.Appointment.DateTime : default))
             .ForMember(d => d.VitalSigns,
-                o => o.MapFrom(s => s.VitalSigns));
+                o => o.MapFrom(s => s.VitalSigns))
+            .ForMember(d => d.Prescription,
+                o => o.MapFrom(s => s.Prescription));
         CreateMap<VitalSigns, VitalSignsDto>();
         CreateMap<Icd10Code, Icd10CodeDto>();
+
+        CreateMap<Prescription, PrescriptionDto>()
+            .ForMember(d => d.PatientFullName,
+                o => o.MapFrom(s => s.MedicalRecord != null && s.MedicalRecord.Appointment != null && s.MedicalRecord.Appointment.Patient != null
+                    ? $"{s.MedicalRecord.Appointment.Patient.Name} {s.MedicalRecord.Appointment.Patient.Surname}"
+                    : string.Empty))
+            .ForMember(d => d.DoctorName,
+                o => o.MapFrom(s => s.MedicalRecord != null && s.MedicalRecord.Appointment != null && s.MedicalRecord.Appointment.Doctor != null
+                    ? s.MedicalRecord.Appointment.Doctor.Name
+                    : string.Empty))
+            .ForMember(d => d.DoctorBranch,
+                o => o.MapFrom(s => s.MedicalRecord != null && s.MedicalRecord.Appointment != null && s.MedicalRecord.Appointment.Doctor != null
+                    ? s.MedicalRecord.Appointment.Doctor.Branch
+                    : string.Empty));
+        CreateMap<PrescriptionItem, PrescriptionItemDto>();
         CreateMap<CreateMedicalRecordDto, MedicalRecord>()
             .ForMember(d => d.VitalSigns, o => o.Ignore());
         CreateMap<UpdateMedicalRecordDto, MedicalRecord>()

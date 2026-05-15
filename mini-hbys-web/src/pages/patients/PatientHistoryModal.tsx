@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ClipboardList,
   Droplet,
+  FileSignature,
   FileText,
   HeartPulse,
   IdCard,
@@ -364,6 +365,40 @@ function TimelineItem({ record }: { record: MedicalRecord }) {
             value={record.notes}
             icon={<FileText className="w-3 h-3" />}
           />
+        )}
+
+        {record.prescription && record.prescription.items.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-medical-700 font-semibold mb-2">
+              <FileSignature className="w-3 h-3" />
+              Reçete
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-medical-100 text-medical-800 normal-case tracking-normal">
+                {record.prescription.prescriptionNumber}
+              </span>
+            </div>
+            <div className="rounded-md border border-slate-200 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="text-left px-2 py-1.5 font-medium">İlaç</th>
+                    <th className="text-left px-2 py-1.5 font-medium">Doz</th>
+                    <th className="text-left px-2 py-1.5 font-medium">Sıklık</th>
+                    <th className="text-left px-2 py-1.5 font-medium">Süre</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {record.prescription.items.map((it, i) => (
+                    <tr key={it.id ?? i}>
+                      <td className="px-2 py-1.5 text-slate-800 font-medium">{it.medicationName}</td>
+                      <td className="px-2 py-1.5 text-slate-600 tabular-nums">{it.dosage}</td>
+                      <td className="px-2 py-1.5 text-slate-600">{it.frequency}</td>
+                      <td className="px-2 py-1.5 text-slate-600">{it.duration}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
     </li>

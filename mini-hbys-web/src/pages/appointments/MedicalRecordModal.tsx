@@ -8,13 +8,17 @@ import {
   CalendarClock,
   ClipboardList,
   Droplet,
+  FileSignature,
   FileText,
   HeartPulse,
+  Pencil,
   Pill,
+  Plus,
   Search,
   Stethoscope,
   Tag,
   Thermometer,
+  Trash2,
   User,
   Weight,
   Wind,
@@ -25,8 +29,16 @@ import { Button } from "../../components/ui/Button";
 import { TextArea } from "../../components/ui/TextArea";
 import { medicalRecordService } from "../../services/medicalRecordService";
 import { icd10Service } from "../../services/icd10Service";
+import { prescriptionService } from "../../services/prescriptionService";
 import { useAuth } from "../../contexts/AuthContext";
-import type { Appointment, Icd10Code, MedicalRecord, VitalSigns } from "../../types";
+import type {
+  Appointment,
+  CreatePrescriptionItemDto,
+  Icd10Code,
+  MedicalRecord,
+  Prescription,
+  VitalSigns,
+} from "../../types";
 
 interface FormValues {
   chiefComplaint: string;
@@ -210,12 +222,14 @@ export function MedicalRecordModal({
           <div className="h-20 rounded-lg bg-slate-100 animate-pulse" />
           <div className="h-20 rounded-lg bg-slate-100 animate-pulse" />
         </div>
-      ) : effectiveReadonly ? (
+      ) : (
+      <div className="max-h-[65vh] overflow-y-auto -mx-6 px-6 pb-1 space-y-5">
+      {effectiveReadonly ? (
         <ReadonlyView record={existing} onClose={onClose} />
       ) : (
         <form
           onSubmit={submit}
-          className="space-y-5 max-h-[65vh] overflow-y-auto -mx-6 px-6 pb-1"
+          className="space-y-5"
         >
           <Section title="Vital Bulgular" icon={<Activity className="w-4 h-4" />}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -356,7 +370,7 @@ export function MedicalRecordModal({
             />
           </Section>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 bg-white">
             <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Vazgeç
             </Button>
@@ -365,6 +379,16 @@ export function MedicalRecordModal({
             </Button>
           </div>
         </form>
+      )}
+
+      {existing && (
+        <PrescriptionSection
+          medicalRecordId={existing.id}
+          initialPrescription={existing.prescription ?? null}
+          canEdit={canEdit}
+        />
+      )}
+      </div>
       )}
     </Modal>
   );
@@ -429,7 +453,7 @@ function ReadonlyView({
   const hasVitals = hasAnyVital(v);
 
   return (
-    <div className="space-y-5 max-h-[65vh] overflow-y-auto -mx-6 px-6 pb-1">
+    <div className="space-y-5">
       {hasVitals && (
         <Section title="Vital Bulgular" icon={<Activity className="w-4 h-4" />}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -505,7 +529,7 @@ function ReadonlyView({
       <ReadonlySoap label="Tedavi Planı" value={record.treatmentPlan ?? ""} />
       <ReadonlySoap label="Ek Notlar" value={record.notes ?? ""} />
 
-      <div className="flex justify-center pt-3 border-t border-slate-100 sticky bottom-0 bg-white">
+      <div className="flex justify-center pt-3 border-t border-slate-100 bg-white">
         <Button type="button" variant="secondary" onClick={onClose}>
           Kapat
         </Button>
@@ -798,5 +822,352 @@ function Icd10Search({
         </div>
       )}
     </div>
+  );
+}
+
+// --- Reçete Bölümü -----------------------------------------------------------
+
+interface DraftItem {
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+}
+
+const emptyDraft = (): DraftItem => ({
+  medicationName: "",
+  dosage: "",
+  frequency: "",
+  duration: "",
+  instructions: "",
+});
+
+const itemToDraft = (i: { medicationName: string; dosage: string; frequency: string; duration: string; instructions?: string | null }): DraftItem => ({
+  medicationName: i.medicationName,
+  dosage: i.dosage,
+  frequency: i.frequency,
+  duration: i.duration,
+  instructions: i.instructions ?? "",
+});
+
+function PrescriptionSection({
+  medicalRecordId,
+  initialPrescription,
+  canEdit,
+}: {
+  medicalRecordId: number;
+  initialPrescription: Prescription | null;
+  canEdit: boolean;
+}) {
+  const [prescription, setPrescription] = useState<Prescription | null>(initialPrescription);
+  const [mode, setMode] = useState<"view" | "form">("view");
+  const [items, setItems] = useState<DraftItem[]>([emptyDraft()]);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<number, Partial<Record<keyof DraftItem, string>>>>({});
+
+  // Update local state when the parent provides a different prescription
+  // (e.g., modal reopened for a different record).
+  useEffect(() => {
+    setPrescription(initialPrescription);
+    setMode("view");
+    setItems([emptyDraft()]);
+    setErrors({});
+  }, [initialPrescription, medicalRecordId]);
+
+  const startWrite = () => {
+    setItems([emptyDraft()]);
+    setErrors({});
+    setMode("form");
+  };
+
+  const startEdit = () => {
+    if (!prescription) return;
+    setItems(prescription.items.length > 0 ? prescription.items.map(itemToDraft) : [emptyDraft()]);
+    setErrors({});
+    setMode("form");
+  };
+
+  const cancelForm = () => {
+    setMode("view");
+    setErrors({});
+  };
+
+  const updateItem = <K extends keyof DraftItem>(idx: number, field: K, value: DraftItem[K]) => {
+    setItems((arr) => arr.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+    if (errors[idx]?.[field]) {
+      setErrors((e) => {
+        const next = { ...e };
+        const row = { ...(next[idx] ?? {}) };
+        delete row[field];
+        next[idx] = row;
+        return next;
+      });
+    }
+  };
+
+  const addRow = () => setItems((arr) => [...arr, emptyDraft()]);
+  const removeRow = (idx: number) => {
+    setItems((arr) => (arr.length === 1 ? arr : arr.filter((_, i) => i !== idx)));
+    setErrors((e) => {
+      const next = { ...e };
+      delete next[idx];
+      return next;
+    });
+  };
+
+  const validate = (): boolean => {
+    const next: typeof errors = {};
+    items.forEach((it, idx) => {
+      const row: Partial<Record<keyof DraftItem, string>> = {};
+      if (!it.medicationName.trim()) row.medicationName = "İlaç adı zorunludur.";
+      if (!it.dosage.trim()) row.dosage = "Doz zorunludur.";
+      if (!it.frequency.trim()) row.frequency = "Sıklık zorunludur.";
+      if (!it.duration.trim()) row.duration = "Süre zorunludur.";
+      if (Object.keys(row).length) next[idx] = row;
+    });
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const submit = async () => {
+    if (!validate()) {
+      toast.error("Lütfen tüm zorunlu alanları doldurun.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload: CreatePrescriptionItemDto[] = items.map((it) => ({
+        medicationName: it.medicationName.trim(),
+        dosage: it.dosage.trim(),
+        frequency: it.frequency.trim(),
+        duration: it.duration.trim(),
+        instructions: it.instructions.trim() || null,
+      }));
+
+      const saved = prescription
+        ? await prescriptionService.update(prescription.id, { items: payload })
+        : await prescriptionService.create({ medicalRecordId, items: payload });
+
+      setPrescription(saved);
+      setMode("view");
+      toast.success(prescription ? "Reçete güncellendi." : "Reçete oluşturuldu.");
+    } catch {
+      /* interceptor */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="space-y-3 pt-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-medical-700">
+          <span className="w-6 h-6 rounded-md bg-medical-50 flex items-center justify-center text-medical-600">
+            <FileSignature className="w-4 h-4" />
+          </span>
+          Reçete
+          {prescription && (
+            <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-medical-100 text-medical-800 normal-case tracking-normal">
+              {prescription.prescriptionNumber}
+            </span>
+          )}
+        </div>
+        {mode === "view" && prescription && canEdit && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon={<Pencil className="w-3.5 h-3.5" />}
+            onClick={startEdit}
+          >
+            Düzenle
+          </Button>
+        )}
+      </div>
+
+      {mode === "view" && !prescription && (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/40 p-4 text-sm text-slate-500 text-center">
+          {canEdit ? (
+            <div className="space-y-2">
+              <div>Bu muayene için henüz reçete yazılmamış.</div>
+              <Button
+                type="button"
+                size="sm"
+                icon={<Plus className="w-3.5 h-3.5" />}
+                onClick={startWrite}
+              >
+                Reçete Yaz
+              </Button>
+            </div>
+          ) : (
+            <div>Bu muayene için reçete yazılmamış.</div>
+          )}
+        </div>
+      )}
+
+      {mode === "view" && prescription && (
+        <PrescriptionTable prescription={prescription} />
+      )}
+
+      {mode === "form" && (
+        <div className="space-y-3">
+          {items.map((it, idx) => (
+            <div
+              key={idx}
+              className="rounded-lg border border-slate-200 bg-white p-3 space-y-2 relative"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-wider font-medium text-slate-500">
+                  İlaç #{idx + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeRow(idx)}
+                  disabled={items.length === 1}
+                  className="text-rose-500 hover:text-rose-700 disabled:text-slate-300 disabled:cursor-not-allowed p-1 rounded transition-colors"
+                  aria-label="İlacı kaldır"
+                  title={items.length === 1 ? "En az bir ilaç gerekli" : "Kaldır"}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <DrugInput
+                  label="İlaç Adı"
+                  placeholder="Örn: Parol 500 mg tablet"
+                  value={it.medicationName}
+                  onChange={(v) => updateItem(idx, "medicationName", v)}
+                  error={errors[idx]?.medicationName}
+                />
+                <DrugInput
+                  label="Doz"
+                  placeholder="Örn: 500 mg"
+                  value={it.dosage}
+                  onChange={(v) => updateItem(idx, "dosage", v)}
+                  error={errors[idx]?.dosage}
+                />
+                <DrugInput
+                  label="Kullanım Sıklığı"
+                  placeholder="Örn: Günde 3 kez"
+                  value={it.frequency}
+                  onChange={(v) => updateItem(idx, "frequency", v)}
+                  error={errors[idx]?.frequency}
+                />
+                <DrugInput
+                  label="Süre"
+                  placeholder="Örn: 7 gün"
+                  value={it.duration}
+                  onChange={(v) => updateItem(idx, "duration", v)}
+                  error={errors[idx]?.duration}
+                />
+              </div>
+              <DrugInput
+                label="Özel Talimat (opsiyonel)"
+                placeholder="Örn: Aç karnına, yemeklerden sonra..."
+                value={it.instructions}
+                onChange={(v) => updateItem(idx, "instructions", v)}
+              />
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<Plus className="w-3.5 h-3.5" />}
+              onClick={addRow}
+            >
+              Yeni İlaç Ekle
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={cancelForm} disabled={saving}>
+                Vazgeç
+              </Button>
+              <Button type="button" size="sm" onClick={submit} loading={saving}>
+                {prescription ? "Reçeteyi Güncelle" : "Reçeteyi Kaydet"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PrescriptionTable({ prescription }: { prescription: Prescription }) {
+  return (
+    <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+      <div className="px-3 py-2 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
+        <span>
+          Reçete tarihi:{" "}
+          <span className="font-medium text-slate-700 tabular-nums">
+            {format(new Date(prescription.prescribedAt), "dd MMM yyyy HH:mm", { locale: tr })}
+          </span>
+        </span>
+        <span className="text-slate-500">{prescription.items.length} ilaç</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50/40 text-slate-600 text-[11px] uppercase tracking-wider">
+            <tr>
+              <th className="text-left px-3 py-2 font-medium">İlaç</th>
+              <th className="text-left px-3 py-2 font-medium">Doz</th>
+              <th className="text-left px-3 py-2 font-medium">Sıklık</th>
+              <th className="text-left px-3 py-2 font-medium">Süre</th>
+              <th className="text-left px-3 py-2 font-medium">Talimat</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {prescription.items.map((it, i) => (
+              <tr key={it.id ?? i}>
+                <td className="px-3 py-2 text-slate-800 font-medium">{it.medicationName}</td>
+                <td className="px-3 py-2 text-slate-700 tabular-nums">{it.dosage}</td>
+                <td className="px-3 py-2 text-slate-700">{it.frequency}</td>
+                <td className="px-3 py-2 text-slate-700">{it.duration}</td>
+                <td className="px-3 py-2 text-slate-600 italic">
+                  {it.instructions ? it.instructions : <span className="text-slate-300 not-italic">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function DrugInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  error?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] uppercase tracking-wider font-medium text-slate-500 mb-1">
+        {label}
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full px-2.5 py-1.5 text-sm rounded-md border bg-white
+                   focus:outline-none focus:ring-2 focus:ring-medical-500/30 focus:border-medical-500
+                   transition-colors
+                   ${error ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/30" : "border-slate-300"}`}
+      />
+      {error && <span className="block text-[11px] text-rose-600 mt-0.5">{error}</span>}
+    </label>
   );
 }
