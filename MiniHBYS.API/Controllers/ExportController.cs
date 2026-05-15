@@ -190,10 +190,9 @@ public class ExportController : ControllerBase
 
     private bool IsDoctorRole() => User.IsInRole("Doktor");
 
-    private bool TryGetCurrentUserId(out int userId)
+    private bool TryGetCurrentUserId(out int doctorId)
     {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                  ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(sub, out userId);
+        var claim = User.FindFirstValue("doctorId");
+        return int.TryParse(claim, out doctorId);
     }
 }

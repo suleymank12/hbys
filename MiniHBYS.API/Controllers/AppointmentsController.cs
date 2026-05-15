@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniHBYS.Core.DTOs;
+using MiniHBYS.Core.Enums;
 using MiniHBYS.Core.Interfaces;
 
 namespace MiniHBYS.API.Controllers;
@@ -82,10 +84,19 @@ public class AppointmentsController : ControllerBase
     [HttpPut("{id:int}/status")]
     [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateAppointmentStatusDto dto)
     {
-        var result = await _service.UpdateStatusAsync(id, dto);
+        if (!TryGetUserRole(out var role)) return Forbid();
+
+        var result = await _service.UpdateStatusAsync(id, dto, role);
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    private bool TryGetUserRole(out UserRole role)
+    {
+        var claim = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role");
+        return Enum.TryParse(claim, out role);
     }
 
     /// <summary>Randevuyu iptal eder (soft delete).</summary>

@@ -12,7 +12,10 @@
       "Bash(find /d/HBYSproje/MiniHBYS.* -type f -name \"*.cs\")",
       "Bash(awk -F: '{print $1}')",
       "Bash(rmdir /s /q D:\\\\tmp\\\\hbysbuild)",
-      "Bash(rm -rf D:/tmp/hbysbuild)"
+      "Bash(rm -rf D:/tmp/hbysbuild)",
+      "Bash(taskkill /F /PID 14040)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }

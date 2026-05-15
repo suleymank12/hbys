@@ -16,6 +16,7 @@ public class LoginResponseDto
     public string Name { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public string RoleText { get; set; } = string.Empty;
+    public int? DoctorId { get; set; }
     public DateTime ExpiresAt { get; set; }
 }
 
@@ -26,4 +27,5 @@ public class CurrentUserDto
     public string Name { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public string RoleText { get; set; } = string.Empty;
+    public int? DoctorId { get; set; }
 }

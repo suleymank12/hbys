@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, FileText, Pencil, Search, Stethoscope } from "lucide-react";
-import { format } from "date-fns";
+import {
+  CalendarDays,
+  Eye,
+  FileText,
+  Pencil,
+  Search,
+  Stethoscope,
+} from "lucide-react";
+import { format, isToday, isYesterday } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "../../components/ui/Button";
 import { medicalRecordService } from "../../services/medicalRecordService";
@@ -11,10 +18,16 @@ import { ExportButton } from "../../components/ui/ExportButton";
 import { exportService } from "../../services/exportService";
 
 const DIAGNOSIS_MAX = 60;
-const NOTES_MAX = 40;
+const COMPLAINT_MAX = 40;
 
 const truncate = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+
+const formatDateGroup = (date: Date): string => {
+  if (isToday(date)) return "Bugün";
+  if (isYesterday(date)) return "Dün";
+  return format(date, "d MMMM yyyy, EEEE", { locale: tr });
+};
 
 const recordToAppointment = (r: MedicalRecord): Appointment => ({
   id: r.appointmentId,
@@ -53,8 +66,8 @@ export function MedicalRecordsPage() {
     setLoading(true);
     try {
       const data =
-        isDoctor && user
-          ? await medicalRecordService.getByDoctor(user.id)
+        isDoctor && user?.doctorId
+          ? await medicalRecordService.getByDoctor(user.doctorId)
           : await medicalRecordService.getAll();
       setRecords(data);
     } catch {
@@ -67,7 +80,7 @@ export function MedicalRecordsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDoctor, user?.id]);
+  }, [isDoctor, user?.doctorId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("tr-TR");
@@ -79,6 +92,23 @@ export function MedicalRecordsPage() {
         r.diagnosis.toLocaleLowerCase("tr-TR").includes(q)
     );
   }, [records, search]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, MedicalRecord[]>();
+    filtered.forEach((r) => {
+      const key = format(new Date(r.appointmentDate), "yyyy-MM-dd");
+      const arr = map.get(key);
+      if (arr) arr.push(r);
+      else map.set(key, [r]);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => (a > b ? -1 : a < b ? 1 : 0))
+      .map(([key, items]) => ({
+        key,
+        date: new Date(items[0].appointmentDate),
+        items,
+      }));
+  }, [filtered]);
 
   return (
     <div className="space-y-5">
@@ -115,11 +145,11 @@ export function MedicalRecordsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
               <tr>
-                <th className="text-left px-5 py-3 font-medium">Tarih & Saat</th>
+                <th className="text-left px-5 py-3 font-medium w-20">Saat</th>
                 <th className="text-left px-5 py-3 font-medium">Hasta</th>
                 <th className="text-left px-5 py-3 font-medium">Doktor</th>
                 <th className="text-left px-5 py-3 font-medium">Tanı</th>
-                <th className="text-left px-5 py-3 font-medium">Notlar</th>
+                <th className="text-left px-5 py-3 font-medium">Şikayet</th>
                 <th className="text-right px-5 py-3 font-medium">İşlemler</th>
               </tr>
             </thead>
@@ -146,78 +176,92 @@ export function MedicalRecordsPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => {
-                  const dt = new Date(r.appointmentDate);
-                  const notes = r.notes?.trim() ?? "";
-                  const notesOverflow = notes.length > NOTES_MAX;
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="font-medium text-slate-900 tabular-nums">
-                          {format(dt, "dd MMM yyyy", { locale: tr })}
-                        </div>
-                        <div className="text-xs text-slate-500 tabular-nums">
-                          {format(dt, "HH:mm", { locale: tr })}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-700">
-                        {r.patientFullName}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="text-slate-700">{r.doctorName}</div>
-                        <div className="text-xs text-slate-500">{r.doctorBranch}</div>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-700 max-w-[360px]">
-                        <span title={r.diagnosis.length > DIAGNOSIS_MAX ? r.diagnosis : undefined}>
-                          {truncate(r.diagnosis, DIAGNOSIS_MAX)}
+                grouped.flatMap((group) => [
+                  <tr key={`g-${group.key}`} className="bg-medical-50/50">
+                    <td colSpan={6} className="px-5 py-2.5 border-y border-medical-100">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-medical-800 uppercase tracking-wide">
+                        <CalendarDays className="w-3.5 h-3.5 text-medical-600" />
+                        <span>{formatDateGroup(group.date)}</span>
+                        <span className="text-medical-600/70 normal-case font-normal tracking-normal">
+                          · {group.items.length} kayıt
                         </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-600 max-w-[280px]">
-                        {notes ? (
-                          <span className="group relative inline-block align-middle">
-                            <span className="cursor-help">{truncate(notes, NOTES_MAX)}</span>
-                            {notesOverflow && (
-                              <span
-                                role="tooltip"
-                                className="pointer-events-none absolute left-0 top-full mt-1.5 z-20
-                                           w-72 max-w-[20rem] px-3 py-2 rounded-md
-                                           bg-slate-900 text-white text-xs leading-relaxed shadow-lg
-                                           opacity-0 group-hover:opacity-100
-                                           transition-opacity duration-150
-                                           whitespace-pre-wrap break-words"
-                              >
-                                {notes}
-                              </span>
-                            )}
+                      </div>
+                    </td>
+                  </tr>,
+                  ...group.items.map((r) => {
+                    const dt = new Date(r.appointmentDate);
+                    const complaint = r.chiefComplaint?.trim() ?? "";
+                    const complaintOverflow = complaint.length > COMPLAINT_MAX;
+                    return (
+                      <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <div className="text-sm font-medium text-slate-900 tabular-nums">
+                            {format(dt, "HH:mm")}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-700">
+                          {r.patientFullName}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="text-slate-700">{r.doctorName}</div>
+                          <div className="text-xs text-slate-500">{r.doctorBranch}</div>
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-700 max-w-[360px]">
+                          <span title={r.diagnosis.length > DIAGNOSIS_MAX ? r.diagnosis : undefined}>
+                            {truncate(r.diagnosis, DIAGNOSIS_MAX)}
                           </span>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <div className="inline-flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-medical-700 hover:bg-medical-50"
-                            icon={<Eye className="w-3.5 h-3.5" />}
-                            onClick={() => openView(r)}
-                          >
-                            Görüntüle
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={<Pencil className="w-3.5 h-3.5" />}
-                            onClick={() => openEdit(r)}
-                          >
-                            Düzenle
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-600 max-w-[280px]">
+                          {complaint ? (
+                            <span className="group relative inline-block align-middle">
+                              <span className="cursor-help">
+                                {truncate(complaint, COMPLAINT_MAX)}
+                              </span>
+                              {complaintOverflow && (
+                                <span
+                                  role="tooltip"
+                                  className="pointer-events-none absolute left-0 top-full mt-1.5 z-20
+                                             w-72 max-w-[20rem] px-3 py-2 rounded-md
+                                             bg-slate-900 text-white text-xs leading-relaxed shadow-lg
+                                             opacity-0 group-hover:opacity-100
+                                             transition-opacity duration-150
+                                             whitespace-pre-wrap break-words"
+                                >
+                                  {complaint}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <div className="inline-flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-medical-700 hover:bg-medical-50"
+                              icon={<Eye className="w-3.5 h-3.5" />}
+                              onClick={() => openView(r)}
+                            >
+                              Görüntüle
+                            </Button>
+                            {isDoctor && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={<Pencil className="w-3.5 h-3.5" />}
+                                onClick={() => openEdit(r)}
+                              >
+                                Düzenle
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }),
+                ])
               )}
             </tbody>
           </table>

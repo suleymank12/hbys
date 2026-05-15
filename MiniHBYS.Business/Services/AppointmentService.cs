@@ -68,6 +68,7 @@ public class AppointmentService : IAppointmentService
         var conflict = await _context.Appointments.AnyAsync(a =>
             a.DoctorId == dto.DoctorId &&
             a.Status != AppointmentStatus.IptalEdildi &&
+            a.Status != AppointmentStatus.Gelmedi &&
             a.DateTime >= slotStart &&
             a.DateTime <= slotEnd);
 
@@ -91,16 +92,18 @@ public class AppointmentService : IAppointmentService
         return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(created), "Randevu oluşturuldu.");
     }
 
-    public async Task<ApiResponse<AppointmentDto>> UpdateStatusAsync(int id, UpdateAppointmentStatusDto dto)
+    public async Task<ApiResponse<AppointmentDto>> UpdateStatusAsync(int id, UpdateAppointmentStatusDto dto, UserRole role)
     {
         var entity = await _context.Appointments.FirstOrDefaultAsync(a => a.Id == id);
         if (entity is null) return ApiResponse<AppointmentDto>.Fail("Randevu bulunamadı.");
 
-        if (entity.Status != AppointmentStatus.Bekliyor)
-            return ApiResponse<AppointmentDto>.Fail("Yalnızca 'Bekliyor' statüsündeki randevunun durumu değiştirilebilir.");
+        var (allowed, allowedRoles) = ResolveTransition(entity.Status, dto.Status);
+        if (!allowed)
+            return ApiResponse<AppointmentDto>.Fail(
+                $"'{StatusText(entity.Status)}' durumundan '{StatusText(dto.Status)}' durumuna geçiş yapılamaz.");
 
-        if (dto.Status != AppointmentStatus.Tamamlandi && dto.Status != AppointmentStatus.IptalEdildi)
-            return ApiResponse<AppointmentDto>.Fail("Geçersiz hedef statü. Tamamlandı veya İptal Edildi olmalıdır.");
+        if (!allowedRoles.Contains(role))
+            return ApiResponse<AppointmentDto>.Fail("Bu statü değişikliği için yetkiniz yok.");
 
         entity.Status = dto.Status;
         entity.UpdatedAt = DateTime.UtcNow;
@@ -109,6 +112,33 @@ public class AppointmentService : IAppointmentService
         var updated = await BaseQuery().FirstAsync(a => a.Id == entity.Id);
         return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(updated), "Randevu durumu güncellendi.");
     }
+
+    /// <summary>
+    /// İzin verilen statü geçişleri ve bu geçişi yapabilecek roller.
+    /// Geri dönüş ve atlama yasak — yalnız aşağıdaki çiftler izinlidir.
+    /// </summary>
+    private static (bool Allowed, UserRole[] AllowedRoles) ResolveTransition(
+        AppointmentStatus current,
+        AppointmentStatus target) => (current, target) switch
+    {
+        (AppointmentStatus.Bekliyor,        AppointmentStatus.Geldi)            => (true, new[] { UserRole.Admin, UserRole.Sekreter }),
+        (AppointmentStatus.Bekliyor,        AppointmentStatus.IptalEdildi)      => (true, new[] { UserRole.Admin, UserRole.Sekreter }),
+        (AppointmentStatus.Bekliyor,        AppointmentStatus.Gelmedi)          => (true, new[] { UserRole.Admin, UserRole.Sekreter }),
+        (AppointmentStatus.Geldi,           AppointmentStatus.MuayenedeAlindi)  => (true, new[] { UserRole.Doktor }),
+        (AppointmentStatus.MuayenedeAlindi, AppointmentStatus.Tamamlandi)       => (true, new[] { UserRole.Doktor }),
+        _ => (false, Array.Empty<UserRole>())
+    };
+
+    private static string StatusText(AppointmentStatus s) => s switch
+    {
+        AppointmentStatus.Bekliyor => "Bekliyor",
+        AppointmentStatus.Geldi => "Geldi",
+        AppointmentStatus.MuayenedeAlindi => "Muayenede",
+        AppointmentStatus.Tamamlandi => "Tamamlandı",
+        AppointmentStatus.IptalEdildi => "İptal Edildi",
+        AppointmentStatus.Gelmedi => "Gelmedi",
+        _ => s.ToString()
+    };
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {

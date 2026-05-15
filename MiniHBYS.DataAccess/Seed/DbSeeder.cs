@@ -12,20 +12,14 @@ public static class DbSeeder
         await context.Database.MigrateAsync();
 
         await SeedSystemUsersAsync(context);
+        await SeedDoctorsAsync(context);
 
         if (await context.Patients.AnyAsync())
             return;
 
         var doctors = await context.Doctors
-            .Where(d => d.Role == UserRole.Doktor)
+            .Include(d => d.User)
             .ToListAsync();
-
-        if (!doctors.Any())
-        {
-            doctors = SeedDoctors();
-            await context.Doctors.AddRangeAsync(doctors);
-            await context.SaveChangesAsync();
-        }
 
         var patients = SeedPatients();
         await context.Patients.AddRangeAsync(patients);
@@ -42,32 +36,32 @@ public static class DbSeeder
 
     private static async Task SeedSystemUsersAsync(AppDbContext context)
     {
-        var systemUsers = new (string Name, string Branch, string Email, string Password, UserRole Role)[]
+        var systemUsers = new (string Name, string Email, string Password, UserRole Role)[]
         {
-            ("Sistem Yöneticisi", "Yönetim", "admin@minihbys.com",     "Admin123!",    UserRole.Admin),
-            ("Sekreter",           "Sekreterlik", "sekreter@minihbys.com", "Sekreter123!", UserRole.Sekreter)
+            ("Sistem Yöneticisi", "admin@minihbys.com",    "Admin123!",    UserRole.Admin),
+            ("Sekreter",          "sekreter@minihbys.com", "Sekreter123!", UserRole.Sekreter)
         };
 
         foreach (var u in systemUsers)
         {
-            if (await context.Doctors.AnyAsync(d => d.Email == u.Email))
+            if (await context.Users.AnyAsync(x => x.Email == u.Email))
                 continue;
 
-            await context.Doctors.AddAsync(new Doctor
+            await context.Users.AddAsync(new User
             {
                 Name = u.Name,
-                Branch = u.Branch,
                 Email = u.Email,
                 Password = BCrypt.Net.BCrypt.HashPassword(u.Password),
-                Role = u.Role
+                Role = u.Role,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
             });
         }
         await context.SaveChangesAsync();
     }
 
-    private static List<Doctor> SeedDoctors()
+    private static async Task SeedDoctorsAsync(AppDbContext context)
     {
-        var password = BCrypt.Net.BCrypt.HashPassword("Doctor123!");
         var data = new (string Name, string Branch, string Email)[]
         {
             ("Dr. Ahmet Yılmaz",    "Dahiliye",    "ahmet.yilmaz@minihbys.com"),
@@ -82,50 +76,79 @@ public static class DbSeeder
             ("Dr. Hatice Öztürk",   "KBB",         "hatice.ozturk@minihbys.com"),
         };
 
-        return data.Select(d => new Doctor
+        var password = BCrypt.Net.BCrypt.HashPassword("Doctor123!");
+
+        foreach (var d in data)
         {
-            Name = d.Name,
-            Branch = d.Branch,
-            Email = d.Email,
-            Password = password,
-            Role = UserRole.Doktor
-        }).ToList();
+            if (await context.Doctors.AnyAsync(x => x.User.Email == d.Email))
+                continue;
+            if (await context.Users.AnyAsync(u => u.Email == d.Email))
+                continue;
+
+            var user = new User
+            {
+                Name = d.Name,
+                Email = d.Email,
+                Password = password,
+                Role = UserRole.Doktor,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            };
+            await context.Users.AddAsync(user);
+            await context.SaveChangesAsync();
+
+            await context.Doctors.AddAsync(new Doctor
+            {
+                Name = d.Name,
+                Branch = d.Branch,
+                UserId = user.Id,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            });
+        }
+        await context.SaveChangesAsync();
     }
 
     private static List<Patient> SeedPatients()
     {
-        var data = new (string Name, string Surname, string NationalId, DateTime BirthDate, string Phone, string? Email)[]
+        var data = new (string Name, string Surname, string NationalId, DateTime BirthDate, string Phone, string? Email, Gender Gender, BloodType? Blood, InsuranceType Insurance, string? City, string? District)[]
         {
-            ("Mehmet",   "Yıldız",     "10000000001", new DateTime(1985, 3, 12),  "05321112201", "mehmet.yildiz@example.com"),
-            ("Ayşe",     "Kurt",       "10000000002", new DateTime(1990, 7, 25),  "05321112202", "ayse.kurt@example.com"),
-            ("Ali",      "Çetin",      "10000000003", new DateTime(1978, 11, 5),  "05321112203", null),
-            ("Fatma",    "Aksoy",      "10000000004", new DateTime(2001, 1, 18),  "05321112204", "fatma.aksoy@example.com"),
-            ("Hüseyin",  "Polat",      "10000000005", new DateTime(1965, 9, 30),  "05321112205", null),
-            ("Emine",    "Erdoğan",    "10000000006", new DateTime(1995, 5, 10),  "05321112206", "emine.erdogan@example.com"),
-            ("Mustafa",  "Yalçın",     "10000000007", new DateTime(1982, 2, 22),  "05321112207", "mustafa.yalcin@example.com"),
-            ("Zeynep",   "Şimşek",     "10000000008", new DateTime(1998, 12, 3),  "05321112208", null),
-            ("Hasan",    "Tekin",      "10000000009", new DateTime(1972, 6, 15),  "05321112209", "hasan.tekin@example.com"),
-            ("Hatice",   "Güneş",      "10000000010", new DateTime(1988, 4, 8),   "05321112210", "hatice.gunes@example.com"),
-            ("İbrahim",  "Korkmaz",    "10000000011", new DateTime(1960, 10, 20), "05321112211", null),
-            ("Elif",     "Bulut",      "10000000012", new DateTime(2003, 8, 14),  "05321112212", "elif.bulut@example.com"),
-            ("Osman",    "Ergin",      "10000000013", new DateTime(1975, 1, 27),  "05321112213", null),
-            ("Merve",    "Keskin",     "10000000014", new DateTime(1992, 11, 9),  "05321112214", "merve.keskin@example.com"),
-            ("Yusuf",    "Aslan",      "10000000015", new DateTime(1987, 7, 2),   "05321112215", "yusuf.aslan@example.com"),
-            ("Sevgi",    "Duran",      "10000000016", new DateTime(1999, 3, 28),  "05321112216", null),
-            ("Kemal",    "Sarı",       "10000000017", new DateTime(1968, 5, 17),  "05321112217", "kemal.sari@example.com"),
-            ("Dilek",    "Aktaş",      "10000000018", new DateTime(1994, 9, 4),   "05321112218", "dilek.aktas@example.com"),
-            ("Burak",    "Özkan",      "10000000019", new DateTime(1983, 12, 21), "05321112219", null),
-            ("Selin",    "Yavuz",      "10000000020", new DateTime(2000, 6, 11),  "05321112220", "selin.yavuz@example.com"),
+            ("Mehmet",   "Yıldız",     "10000000001", new DateTime(1985, 3, 12),  "05321112201", "mehmet.yildiz@example.com",     Gender.Erkek,         BloodType.ARhPositive,  InsuranceType.SGK,     "İstanbul", "Kadıköy"),
+            ("Ayşe",     "Kurt",       "10000000002", new DateTime(1990, 7, 25),  "05321112202", "ayse.kurt@example.com",         Gender.Kadın,         BloodType.BRhPositive,  InsuranceType.SGK,     "İstanbul", "Beşiktaş"),
+            ("Ali",      "Çetin",      "10000000003", new DateTime(1978, 11, 5),  "05321112203", null,                            Gender.Erkek,         BloodType.ORhPositive,  InsuranceType.Ozel,    "Ankara",   "Çankaya"),
+            ("Fatma",    "Aksoy",      "10000000004", new DateTime(2001, 1, 18),  "05321112204", "fatma.aksoy@example.com",       Gender.Kadın,         null,                   InsuranceType.SGK,     "İzmir",    "Karşıyaka"),
+            ("Hüseyin",  "Polat",      "10000000005", new DateTime(1965, 9, 30),  "05321112205", null,                            Gender.Erkek,         BloodType.ABRhPositive, InsuranceType.SGK,     "Bursa",    "Nilüfer"),
+            ("Emine",    "Erdoğan",    "10000000006", new DateTime(1995, 5, 10),  "05321112206", "emine.erdogan@example.com",     Gender.Kadın,         BloodType.ARhNegative,  InsuranceType.SGK,     "İstanbul", "Üsküdar"),
+            ("Mustafa",  "Yalçın",     "10000000007", new DateTime(1982, 2, 22),  "05321112207", "mustafa.yalcin@example.com",    Gender.Erkek,         BloodType.ORhNegative,  InsuranceType.Ozel,    "Antalya",  "Muratpaşa"),
+            ("Zeynep",   "Şimşek",     "10000000008", new DateTime(1998, 12, 3),  "05321112208", null,                            Gender.Kadın,         BloodType.BRhNegative,  InsuranceType.SGK,     "Ankara",   "Keçiören"),
+            ("Hasan",    "Tekin",      "10000000009", new DateTime(1972, 6, 15),  "05321112209", "hasan.tekin@example.com",       Gender.Erkek,         BloodType.ARhPositive,  InsuranceType.SGK,     "İzmir",    "Bornova"),
+            ("Hatice",   "Güneş",      "10000000010", new DateTime(1988, 4, 8),   "05321112210", "hatice.gunes@example.com",      Gender.Kadın,         null,                   InsuranceType.SGK,     "İstanbul", "Şişli"),
+            ("İbrahim",  "Korkmaz",    "10000000011", new DateTime(1960, 10, 20), "05321112211", null,                            Gender.Erkek,         BloodType.ORhPositive,  InsuranceType.SGK,     "Konya",    "Selçuklu"),
+            ("Elif",     "Bulut",      "10000000012", new DateTime(2003, 8, 14),  "05321112212", "elif.bulut@example.com",        Gender.Kadın,         BloodType.ARhPositive,  InsuranceType.SGK,     "İstanbul", "Bakırköy"),
+            ("Osman",    "Ergin",      "10000000013", new DateTime(1975, 1, 27),  "05321112213", null,                            Gender.Erkek,         BloodType.ABRhNegative, InsuranceType.Ozel,    "Ankara",   "Yenimahalle"),
+            ("Merve",    "Keskin",     "10000000014", new DateTime(1992, 11, 9),  "05321112214", "merve.keskin@example.com",      Gender.Kadın,         BloodType.BRhPositive,  InsuranceType.SGK,     "Adana",    "Seyhan"),
+            ("Yusuf",    "Aslan",      "10000000015", new DateTime(1987, 7, 2),   "05321112215", "yusuf.aslan@example.com",       Gender.Erkek,         BloodType.ORhNegative,  InsuranceType.SGK,     "Gaziantep","Şahinbey"),
+            ("Sevgi",    "Duran",      "10000000016", new DateTime(1999, 3, 28),  "05321112216", null,                            Gender.Kadın,         null,                   InsuranceType.Yok,     "İstanbul", "Pendik"),
+            ("Kemal",    "Sarı",       "10000000017", new DateTime(1968, 5, 17),  "05321112217", "kemal.sari@example.com",        Gender.Erkek,         BloodType.ARhNegative,  InsuranceType.SGK,     "Trabzon",  "Ortahisar"),
+            ("Dilek",    "Aktaş",      "10000000018", new DateTime(1994, 9, 4),   "05321112218", "dilek.aktas@example.com",       Gender.Kadın,         BloodType.ABRhPositive, InsuranceType.SGK,     "İstanbul", "Maltepe"),
+            ("Burak",    "Özkan",      "10000000019", new DateTime(1983, 12, 21), "05321112219", null,                            Gender.Erkek,         BloodType.BRhNegative,  InsuranceType.Yabanci, "İstanbul", "Fatih"),
+            ("Selin",    "Yavuz",      "10000000020", new DateTime(2000, 6, 11),  "05321112220", "selin.yavuz@example.com",       Gender.Kadın,         BloodType.ORhPositive,  InsuranceType.Ozel,    "İzmir",    "Konak"),
         };
 
-        return data.Select(p => new Patient
+        return data.Select((p, i) => new Patient
         {
+            ProtocolNumber = $"P-{(i + 1):D6}",
             Name = p.Name,
             Surname = p.Surname,
             NationalId = p.NationalId,
             BirthDate = DateTime.SpecifyKind(p.BirthDate, DateTimeKind.Utc),
+            Gender = p.Gender,
+            BloodType = p.Blood,
+            InsuranceType = p.Insurance,
             Phone = p.Phone,
-            Email = p.Email
+            Email = p.Email,
+            City = p.City,
+            District = p.District
         }).ToList();
     }
 
@@ -160,23 +183,23 @@ public static class DbSeeder
 
     private static List<MedicalRecord> SeedMedicalRecords(List<Appointment> appointments)
     {
-        var diagnoses = new (string Diagnosis, string? Notes)[]
+        var diagnoses = new (string Complaint, string Diagnosis, string? Plan)[]
         {
-            ("Üst solunum yolu enfeksiyonu",  "Bol sıvı tüketimi, istirahat önerildi."),
-            ("Hipertansiyon",                 "Tansiyon takibi, tuz kısıtlaması."),
-            ("Miyopi",                        "Gözlük reçetesi düzenlendi."),
-            ("Akut bronşit",                  "7 gün antibiyotik kürü başlandı."),
-            ("Migren",                        "Tetikleyici faktörlerin kaydı istendi."),
-            ("Tip 2 Diyabet",                 "Diyet ve metformin önerildi."),
-            ("Lomber disk hernisi",           "Fizik tedavi programına yönlendirildi."),
-            ("Gastrit",                       "Proton pompa inhibitörü başlandı."),
-            ("Otitis media",                  "5 gün antibiyotik ve ağrı kesici."),
-            ("Alerjik rinit",                 "Antihistaminik önerildi."),
-            ("Anemi",                         "Demir takviyesi başlandı."),
-            ("Tonsillit",                     "Antibiyotik ve gargara önerildi."),
-            ("Konjonktivit",                  "Antibiyotik damla verildi."),
-            ("Astenopi",                      "Ekran süresi azaltılması önerildi."),
-            ("Siyatalji",                     "Kas gevşetici ve istirahat."),
+            ("Boğaz ağrısı ve burun akıntısı",       "Üst solunum yolu enfeksiyonu",  "Bol sıvı tüketimi, istirahat önerildi."),
+            ("Baş dönmesi, ense ağrısı",             "Hipertansiyon",                 "Tansiyon takibi, tuz kısıtlaması."),
+            ("Uzağı net görememe şikayeti",          "Miyopi",                        "Gözlük reçetesi düzenlendi."),
+            ("Öksürük ve hırıltı, 5 gündür",         "Akut bronşit",                  "7 gün antibiyotik kürü başlandı."),
+            ("Tek taraflı zonklayıcı baş ağrısı",    "Migren",                        "Tetikleyici faktörlerin kaydı istendi."),
+            ("Sık idrara çıkma, susama",             "Tip 2 Diyabet",                 "Diyet ve metformin önerildi."),
+            ("Bel ağrısı, bacağa vuran",             "Lomber disk hernisi",           "Fizik tedavi programına yönlendirildi."),
+            ("Mide yanması, ekşime",                 "Gastrit",                       "Proton pompa inhibitörü başlandı."),
+            ("Kulak ağrısı, çocukta ateş",           "Otitis media",                  "5 gün antibiyotik ve ağrı kesici."),
+            ("Hapşırma, burun kaşıntısı",            "Alerjik rinit",                 "Antihistaminik önerildi."),
+            ("Halsizlik, çabuk yorulma",             "Anemi",                         "Demir takviyesi başlandı."),
+            ("Yutkunma güçlüğü, ateş",               "Tonsillit",                     "Antibiyotik ve gargara önerildi."),
+            ("Gözde kızarıklık ve çapaklanma",       "Konjonktivit",                  "Antibiyotik damla verildi."),
+            ("Göz yorgunluğu, baş ağrısı",           "Astenopi",                      "Ekran süresi azaltılması önerildi."),
+            ("Kalçadan bacağa yayılan ağrı",         "Siyatalji",                     "Kas gevşetici ve istirahat."),
         };
 
         var completed = appointments.Where(a => a.Status == AppointmentStatus.Tamamlandi).Take(15).ToList();
@@ -187,8 +210,9 @@ public static class DbSeeder
             records.Add(new MedicalRecord
             {
                 Appointment = completed[i],
+                ChiefComplaint = diagnoses[i].Complaint,
                 Diagnosis = diagnoses[i].Diagnosis,
-                Notes = diagnoses[i].Notes
+                TreatmentPlan = diagnoses[i].Plan
             });
         }
 

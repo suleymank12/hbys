@@ -111,7 +111,9 @@ export function AppointmentFormModal({
     if (doctorId == null) return [];
     return appointments.filter(
       (a) =>
-        a.doctorId === doctorId && a.status !== AppointmentStatus.IptalEdildi
+        a.doctorId === doctorId &&
+        a.status !== AppointmentStatus.IptalEdildi &&
+        a.status !== AppointmentStatus.Gelmedi
     );
   }, [appointments, doctorId]);
 

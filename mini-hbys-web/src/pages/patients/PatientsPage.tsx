@@ -50,7 +50,8 @@ export function PatientsPage() {
     return patients.filter(
       (p) =>
         p.fullName.toLocaleLowerCase("tr-TR").includes(q) ||
-        p.nationalId.includes(q)
+        p.nationalId.includes(q) ||
+        p.protocolNumber.toLocaleLowerCase("tr-TR").includes(q)
     );
   }, [patients, search]);
 
@@ -105,7 +106,7 @@ export function PatientsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="TC veya isim ile ara..."
+            placeholder="Protokol, TC veya isim ile ara..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 bg-white
@@ -128,11 +129,13 @@ export function PatientsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
               <tr>
+                <th className="text-left px-5 py-3 font-medium">Protokol No</th>
                 <th className="text-left px-5 py-3 font-medium">Ad Soyad</th>
                 <th className="text-left px-5 py-3 font-medium">TC Kimlik No</th>
                 <th className="text-left px-5 py-3 font-medium">Doğum Tarihi</th>
+                <th className="text-left px-5 py-3 font-medium">Cinsiyet</th>
                 <th className="text-left px-5 py-3 font-medium">Telefon</th>
-                <th className="text-left px-5 py-3 font-medium">E-posta</th>
+                <th className="text-left px-5 py-3 font-medium">Sigorta</th>
                 <th className="text-right px-5 py-3 font-medium">İşlemler</th>
               </tr>
             </thead>
@@ -140,7 +143,7 @@ export function PatientsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 6 }).map((__, j) => (
+                    {Array.from({ length: 8 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-3 w-full max-w-[160px] bg-slate-100 rounded animate-pulse" />
                       </td>
@@ -149,7 +152,7 @@ export function PatientsPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-slate-500">
+                  <td colSpan={8} className="px-5 py-16 text-center text-slate-500">
                     <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     {search ? "Aramayla eşleşen hasta bulunamadı." : "Henüz hasta kaydı yok."}
                   </td>
@@ -157,6 +160,9 @@ export function PatientsPage() {
               ) : (
                 filtered.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-5 py-3.5 text-medical-700 font-mono text-xs tabular-nums">
+                      {p.protocolNumber}
+                    </td>
                     <td className="px-5 py-3.5">
                       <div className="font-medium text-slate-900">{p.fullName}</div>
                     </td>
@@ -166,9 +172,12 @@ export function PatientsPage() {
                     <td className="px-5 py-3.5 text-slate-600">
                       {format(new Date(p.birthDate), "dd MMM yyyy", { locale: tr })}
                     </td>
+                    <td className="px-5 py-3.5 text-slate-600">{p.genderText}</td>
                     <td className="px-5 py-3.5 text-slate-600 tabular-nums">{p.phone}</td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {p.email || <span className="text-slate-300">—</span>}
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                        {p.insuranceTypeText}
+                      </span>
                     </td>
                     <td className="px-5 py-3 text-right">
                       <div className="inline-flex gap-1">

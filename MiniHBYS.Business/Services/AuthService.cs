@@ -27,16 +27,19 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
             return ApiResponse<LoginResponseDto>.Fail("E-posta ve şifre zorunludur.");
 
-        var user = await _context.Doctors
+        var user = await _context.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(d => d.Email == dto.Email);
+            .Include(u => u.Doctor)
+            .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
             return ApiResponse<LoginResponseDto>.Fail("E-posta veya şifre hatalı.");
 
+        var doctorId = user.Role == UserRole.Doktor ? user.Doctor?.Id : null;
+
         var expireMinutes = int.Parse(_config["Jwt:ExpireMinutes"] ?? "480");
         var expiresAt = DateTime.UtcNow.AddMinutes(expireMinutes);
-        var token = GenerateJwtToken(user.Id, user.Email, user.Name, user.Role, expiresAt);
+        var token = GenerateJwtToken(user.Id, user.Email, user.Name, user.Role, doctorId, expiresAt);
 
         return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto
         {
@@ -46,18 +49,22 @@ public class AuthService : IAuthService
             Name = user.Name,
             Role = user.Role,
             RoleText = GetRoleText(user.Role),
+            DoctorId = doctorId,
             ExpiresAt = expiresAt
         }, "Giriş başarılı.");
     }
 
     public async Task<ApiResponse<CurrentUserDto>> GetCurrentUserAsync(int userId)
     {
-        var user = await _context.Doctors
+        var user = await _context.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(d => d.Id == userId);
+            .Include(u => u.Doctor)
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user is null)
             return ApiResponse<CurrentUserDto>.Fail("Kullanıcı bulunamadı.");
+
+        var doctorId = user.Role == UserRole.Doktor ? user.Doctor?.Id : null;
 
         return ApiResponse<CurrentUserDto>.Ok(new CurrentUserDto
         {
@@ -65,11 +72,18 @@ public class AuthService : IAuthService
             Email = user.Email,
             Name = user.Name,
             Role = user.Role,
-            RoleText = GetRoleText(user.Role)
+            RoleText = GetRoleText(user.Role),
+            DoctorId = doctorId
         });
     }
 
-    private string GenerateJwtToken(int userId, string email, string name, UserRole role, DateTime expiresAt)
+    private string GenerateJwtToken(
+        int userId,
+        string email,
+        string name,
+        UserRole role,
+        int? doctorId,
+        DateTime expiresAt)
     {
         var key = _config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key yapılandırılmamış.");
         var issuer = _config["Jwt:Issuer"];
@@ -78,16 +92,19 @@ public class AuthService : IAuthService
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, email),
-            new Claim("name", name),
-            new Claim(ClaimTypes.Name, name),
-            new Claim(ClaimTypes.Role, role.ToString()),
-            new Claim("role", role.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new(JwtRegisteredClaimNames.Email, email),
+            new("name", name),
+            new(ClaimTypes.Name, name),
+            new(ClaimTypes.Role, role.ToString()),
+            new("role", role.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (doctorId.HasValue)
+            claims.Add(new Claim("doctorId", doctorId.Value.ToString()));
 
         var token = new JwtSecurityToken(
             issuer: issuer,

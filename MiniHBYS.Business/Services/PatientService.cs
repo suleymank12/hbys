@@ -20,7 +20,9 @@ public class PatientService : IPatientService
 
     public async Task<ApiResponse<IEnumerable<PatientDto>>> GetAllAsync()
     {
-        var list = await _context.Patients.AsNoTracking().OrderBy(p => p.Name).ToListAsync();
+        var list = await _context.Patients.AsNoTracking()
+            .OrderBy(p => p.Name).ThenBy(p => p.Surname)
+            .ToListAsync();
         return ApiResponse<IEnumerable<PatientDto>>.Ok(_mapper.Map<IEnumerable<PatientDto>>(list));
     }
 
@@ -47,6 +49,7 @@ public class PatientService : IPatientService
 
         var entity = _mapper.Map<Patient>(dto);
         entity.BirthDate = DateTime.SpecifyKind(entity.BirthDate, DateTimeKind.Utc);
+        entity.ProtocolNumber = await GenerateProtocolNumberAsync();
         entity.CreatedAt = DateTime.UtcNow;
         entity.IsActive = true;
 
@@ -64,8 +67,18 @@ public class PatientService : IPatientService
         entity.Name = dto.Name;
         entity.Surname = dto.Surname;
         entity.BirthDate = DateTime.SpecifyKind(dto.BirthDate, DateTimeKind.Utc);
+        entity.Gender = dto.Gender;
+        entity.BloodType = dto.BloodType;
+        entity.InsuranceType = dto.InsuranceType;
         entity.Phone = dto.Phone;
         entity.Email = dto.Email;
+        entity.City = dto.City;
+        entity.District = dto.District;
+        entity.Address = dto.Address;
+        entity.EmergencyContactName = dto.EmergencyContactName;
+        entity.EmergencyContactPhone = dto.EmergencyContactPhone;
+        entity.Allergies = dto.Allergies;
+        entity.ChronicDiseases = dto.ChronicDiseases;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -82,5 +95,24 @@ public class PatientService : IPatientService
         await _context.SaveChangesAsync();
 
         return ApiResponse<bool>.Ok(true, "Hasta kaydı silindi.");
+    }
+
+    private async Task<string> GenerateProtocolNumberAsync()
+    {
+        // Soft-delete edilmiş kayıtlar da dahil — en yüksek protokol numarası bulunur.
+        var last = await _context.Patients
+            .IgnoreQueryFilters()
+            .Select(p => p.ProtocolNumber)
+            .OrderByDescending(p => p)
+            .FirstOrDefaultAsync();
+
+        var next = 1;
+        if (!string.IsNullOrWhiteSpace(last) && last.StartsWith("P-")
+            && int.TryParse(last.AsSpan(2), out var parsed))
+        {
+            next = parsed + 1;
+        }
+
+        return $"P-{next:D6}";
     }
 }

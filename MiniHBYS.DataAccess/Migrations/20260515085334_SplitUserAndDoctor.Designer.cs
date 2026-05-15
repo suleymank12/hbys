@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MiniHBYS.DataAccess.Context;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniHBYS.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515085334_SplitUserAndDoctor")]
+    partial class SplitUserAndDoctor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -109,11 +112,6 @@ namespace MiniHBYS.DataAccess.Migrations
                     b.Property<int>("AppointmentId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ChiefComplaint")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -122,23 +120,11 @@ namespace MiniHBYS.DataAccess.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("Examination")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("History")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text");
-
-                    b.Property<string>("TreatmentPlan")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -159,52 +145,15 @@ namespace MiniHBYS.DataAccess.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Allergies")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
                     b.Property<DateTime>("BirthDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("BloodType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ChronicDiseases")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("District")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<string>("EmergencyContactName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("EmergencyContactPhone")
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)");
-
-                    b.Property<int>("Gender")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("InsuranceType")
-                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -224,11 +173,6 @@ namespace MiniHBYS.DataAccess.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("character varying(15)");
 
-                    b.Property<string>("ProtocolNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<string>("Surname")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -240,9 +184,6 @@ namespace MiniHBYS.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NationalId")
-                        .IsUnique();
-
-                    b.HasIndex("ProtocolNumber")
                         .IsUnique();
 
                     b.ToTable("Patients");
@@ -291,61 +232,6 @@ namespace MiniHBYS.DataAccess.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("MiniHBYS.Core.Entities.VitalSigns", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("BloodPressureDiastolic")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("BloodPressureSystolic")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Height")
-                        .HasPrecision(5, 1)
-                        .HasColumnType("numeric(5,1)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MedicalRecordId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("OxygenSaturation")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("Pulse")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("RespiratoryRate")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("Temperature")
-                        .HasPrecision(4, 1)
-                        .HasColumnType("numeric(4,1)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Weight")
-                        .HasPrecision(5, 1)
-                        .HasColumnType("numeric(5,1)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MedicalRecordId")
-                        .IsUnique();
-
-                    b.ToTable("VitalSigns");
-                });
-
             modelBuilder.Entity("MiniHBYS.Core.Entities.Appointment", b =>
                 {
                     b.HasOne("MiniHBYS.Core.Entities.Doctor", "Doctor")
@@ -387,17 +273,6 @@ namespace MiniHBYS.DataAccess.Migrations
                     b.Navigation("Appointment");
                 });
 
-            modelBuilder.Entity("MiniHBYS.Core.Entities.VitalSigns", b =>
-                {
-                    b.HasOne("MiniHBYS.Core.Entities.MedicalRecord", "MedicalRecord")
-                        .WithOne("VitalSigns")
-                        .HasForeignKey("MiniHBYS.Core.Entities.VitalSigns", "MedicalRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MedicalRecord");
-                });
-
             modelBuilder.Entity("MiniHBYS.Core.Entities.Appointment", b =>
                 {
                     b.Navigation("MedicalRecord");
@@ -406,11 +281,6 @@ namespace MiniHBYS.DataAccess.Migrations
             modelBuilder.Entity("MiniHBYS.Core.Entities.Doctor", b =>
                 {
                     b.Navigation("Appointments");
-                });
-
-            modelBuilder.Entity("MiniHBYS.Core.Entities.MedicalRecord", b =>
-                {
-                    b.Navigation("VitalSigns");
                 });
 
             modelBuilder.Entity("MiniHBYS.Core.Entities.Patient", b =>

@@ -1,4 +1,11 @@
-import { Check, Clock, X } from "lucide-react";
+import {
+  Check,
+  Clock,
+  LogIn,
+  Stethoscope,
+  UserX,
+  X,
+} from "lucide-react";
 import { AppointmentStatus } from "../../types";
 
 const META = {
@@ -6,6 +13,16 @@ const META = {
     text: "Bekliyor",
     cls: "bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200/60",
     icon: Clock,
+  },
+  [AppointmentStatus.Geldi]: {
+    text: "Geldi",
+    cls: "bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200/60",
+    icon: LogIn,
+  },
+  [AppointmentStatus.MuayenedeAlindi]: {
+    text: "Muayenede",
+    cls: "bg-purple-100 text-purple-800 ring-1 ring-inset ring-purple-200/60",
+    icon: Stethoscope,
   },
   [AppointmentStatus.Tamamlandi]: {
     text: "Tamamlandı",
@@ -16,6 +33,11 @@ const META = {
     text: "İptal Edildi",
     cls: "bg-rose-100 text-rose-800 ring-1 ring-inset ring-rose-200/60",
     icon: X,
+  },
+  [AppointmentStatus.Gelmedi]: {
+    text: "Gelmedi",
+    cls: "bg-slate-200 text-slate-700 ring-1 ring-inset ring-slate-300/60",
+    icon: UserX,
   },
 };
 

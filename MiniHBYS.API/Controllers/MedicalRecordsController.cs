@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniHBYS.Core.DTOs;
@@ -47,47 +48,43 @@ public class MedicalRecordsController : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
-    /// <summary>Tamamlanmış randevuya muayene kaydı oluşturur.</summary>
-    /// <remarks>
-    /// Kayıt yalnızca `status = Tamamlandı` olan bir randevu için oluşturulabilir
-    /// ve aynı randevuya birden fazla kayıt eklenemez.
-    ///
-    /// Örnek istek:
-    ///
-    ///     POST /api/medical-records
-    ///     {
-    ///       "appointmentId": 45,
-    ///       "diagnosis": "Üst solunum yolu enfeksiyonu",
-    ///       "notes": "5 gün antibiyotik, bol sıvı. 1 hafta sonra kontrol."
-    ///     }
-    /// </remarks>
+    /// <summary>Tamamlanmış randevuya muayene kaydı oluşturur. Yalnızca randevunun
+    /// kendi doktoru tarafından çağrılabilir.</summary>
     [HttpPost]
+    [Authorize(Roles = "Doktor")]
     [ProducesResponseType(typeof(ApiResponse<MedicalRecordDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<MedicalRecordDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] CreateMedicalRecordDto dto)
     {
-        var result = await _service.CreateAsync(dto);
+        if (!TryGetDoctorId(out var doctorId))
+            return Forbid();
+
+        var result = await _service.CreateAsync(dto, doctorId);
         return result.Success
             ? CreatedAtAction(nameof(GetByAppointment), new { appointmentId = result.Data!.AppointmentId }, result)
             : BadRequest(result);
     }
 
-    /// <summary>Muayene kaydını günceller.</summary>
-    /// <remarks>
-    /// Örnek istek:
-    ///
-    ///     PUT /api/medical-records/78
-    ///     {
-    ///       "diagnosis": "Viral farenjit",
-    ///       "notes": "Semptomatik tedavi, istirahat."
-    ///     }
-    /// </remarks>
+    /// <summary>Muayene kaydını günceller. Yalnızca kaydı oluşturan doktor düzenleyebilir.</summary>
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Doktor")]
     [ProducesResponseType(typeof(ApiResponse<MedicalRecordDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<MedicalRecordDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<MedicalRecordDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateMedicalRecordDto dto)
     {
-        var result = await _service.UpdateAsync(id, dto);
-        return result.Success ? Ok(result) : NotFound(result);
+        if (!TryGetDoctorId(out var doctorId))
+            return Forbid();
+
+        var result = await _service.UpdateAsync(id, dto, doctorId);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    private bool TryGetDoctorId(out int doctorId)
+    {
+        var claim = User.FindFirstValue("doctorId");
+        return int.TryParse(claim, out doctorId);
     }
 }

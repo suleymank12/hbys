@@ -1,7 +1,10 @@
 export const AppointmentStatus = {
   Bekliyor: 0,
-  Tamamlandi: 1,
-  IptalEdildi: 2,
+  Geldi: 1,
+  MuayenedeAlindi: 2,
+  Tamamlandi: 3,
+  IptalEdildi: 4,
+  Gelmedi: 5,
 } as const;
 
 export type AppointmentStatus = (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
@@ -35,6 +38,7 @@ export interface LoginResponse {
   name: string;
   role: UserRole;
   roleText: string;
+  doctorId?: number | null;
   expiresAt: string;
 }
 
@@ -44,17 +48,59 @@ export interface CurrentUser {
   name: string;
   role: UserRole;
   roleText: string;
+  doctorId?: number | null;
 }
+
+export const Gender = {
+  Erkek: 0,
+  Kadın: 1,
+  Belirtilmemiş: 2,
+} as const;
+export type Gender = (typeof Gender)[keyof typeof Gender];
+
+export const BloodType = {
+  ARhPositive: 0,
+  ARhNegative: 1,
+  BRhPositive: 2,
+  BRhNegative: 3,
+  ABRhPositive: 4,
+  ABRhNegative: 5,
+  ORhPositive: 6,
+  ORhNegative: 7,
+} as const;
+export type BloodType = (typeof BloodType)[keyof typeof BloodType];
+
+export const InsuranceType = {
+  SGK: 0,
+  Ozel: 1,
+  Yabanci: 2,
+  Yok: 3,
+} as const;
+export type InsuranceType = (typeof InsuranceType)[keyof typeof InsuranceType];
 
 export interface Patient {
   id: number;
+  protocolNumber: string;
   name: string;
   surname: string;
   fullName: string;
   nationalId: string;
   birthDate: string;
+  gender: Gender;
+  genderText: string;
+  bloodType?: BloodType | null;
+  bloodTypeText?: string | null;
+  insuranceType: InsuranceType;
+  insuranceTypeText: string;
   phone: string;
   email?: string | null;
+  city?: string | null;
+  district?: string | null;
+  address?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  allergies?: string | null;
+  chronicDiseases?: string | null;
   createdAt: string;
 }
 
@@ -63,16 +109,36 @@ export interface CreatePatientDto {
   surname: string;
   nationalId: string;
   birthDate: string;
+  gender: Gender;
+  bloodType?: BloodType | null;
+  insuranceType: InsuranceType;
   phone: string;
   email?: string | null;
+  city?: string | null;
+  district?: string | null;
+  address?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  allergies?: string | null;
+  chronicDiseases?: string | null;
 }
 
 export interface UpdatePatientDto {
   name: string;
   surname: string;
   birthDate: string;
+  gender: Gender;
+  bloodType?: BloodType | null;
+  insuranceType: InsuranceType;
   phone: string;
   email?: string | null;
+  city?: string | null;
+  district?: string | null;
+  address?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  allergies?: string | null;
+  chronicDiseases?: string | null;
 }
 
 export interface Doctor {
@@ -119,6 +185,17 @@ export interface UpdateAppointmentStatusDto {
   status: AppointmentStatus;
 }
 
+export interface VitalSigns {
+  bloodPressureSystolic?: number | null;
+  bloodPressureDiastolic?: number | null;
+  pulse?: number | null;
+  temperature?: number | null;
+  respiratoryRate?: number | null;
+  oxygenSaturation?: number | null;
+  height?: number | null;
+  weight?: number | null;
+}
+
 export interface MedicalRecord {
   id: number;
   appointmentId: number;
@@ -126,20 +203,35 @@ export interface MedicalRecord {
   doctorName: string;
   doctorBranch: string;
   appointmentDate: string;
+  chiefComplaint: string;
+  history?: string | null;
+  examination?: string | null;
   diagnosis: string;
+  treatmentPlan?: string | null;
   notes?: string | null;
+  vitalSigns?: VitalSigns | null;
   createdAt: string;
 }
 
 export interface CreateMedicalRecordDto {
   appointmentId: number;
+  chiefComplaint: string;
+  history?: string | null;
+  examination?: string | null;
   diagnosis: string;
+  treatmentPlan?: string | null;
   notes?: string | null;
+  vitalSigns?: VitalSigns | null;
 }
 
 export interface UpdateMedicalRecordDto {
+  chiefComplaint: string;
+  history?: string | null;
+  examination?: string | null;
   diagnosis: string;
+  treatmentPlan?: string | null;
   notes?: string | null;
+  vitalSigns?: VitalSigns | null;
 }
 
 export interface BranchStat {

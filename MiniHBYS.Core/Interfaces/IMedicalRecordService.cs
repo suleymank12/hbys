@@ -10,7 +10,7 @@ public interface IMedicalRecordService
     Task<ApiResponse<MedicalRecordDto>> GetByAppointmentIdAsync(int appointmentId);
     Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetByPatientIdAsync(int patientId);
     Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetByDoctorIdAsync(int doctorId);
-    Task<ApiResponse<MedicalRecordDto>> CreateAsync(CreateMedicalRecordDto dto);
-    Task<ApiResponse<MedicalRecordDto>> UpdateAsync(int id, UpdateMedicalRecordDto dto);
+    Task<ApiResponse<MedicalRecordDto>> CreateAsync(CreateMedicalRecordDto dto, int doctorId);
+    Task<ApiResponse<MedicalRecordDto>> UpdateAsync(int id, UpdateMedicalRecordDto dto, int doctorId);
     Task<ApiResponse<bool>> DeleteAsync(int id);
 }

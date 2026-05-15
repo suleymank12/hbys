@@ -7,21 +7,45 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    public DbSet<User> Users => Set<User>();
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
+    public DbSet<VitalSigns> VitalSigns => Set<VitalSigns>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>(b =>
+        {
+            b.Property(u => u.Name).IsRequired().HasMaxLength(100);
+            b.Property(u => u.Email).IsRequired().HasMaxLength(200);
+            b.Property(u => u.Password).IsRequired().HasMaxLength(200);
+            b.Property(u => u.Role).HasConversion<int>();
+            b.HasIndex(u => u.Email).IsUnique();
+            b.HasQueryFilter(e => e.IsActive);
+        });
+
         modelBuilder.Entity<Patient>(b =>
         {
+            b.Property(p => p.ProtocolNumber).IsRequired().HasMaxLength(20);
             b.Property(p => p.Name).IsRequired().HasMaxLength(100);
             b.Property(p => p.Surname).IsRequired().HasMaxLength(100);
             b.Property(p => p.NationalId).IsRequired().HasMaxLength(11);
             b.Property(p => p.Phone).IsRequired().HasMaxLength(15);
             b.Property(p => p.Email).HasMaxLength(200);
+            b.Property(p => p.Gender).HasConversion<int>();
+            b.Property(p => p.BloodType).HasConversion<int?>();
+            b.Property(p => p.InsuranceType).HasConversion<int>();
+            b.Property(p => p.City).HasMaxLength(100);
+            b.Property(p => p.District).HasMaxLength(100);
+            b.Property(p => p.Address).HasMaxLength(500);
+            b.Property(p => p.EmergencyContactName).HasMaxLength(200);
+            b.Property(p => p.EmergencyContactPhone).HasMaxLength(15);
+            b.Property(p => p.Allergies).HasMaxLength(1000);
+            b.Property(p => p.ChronicDiseases).HasMaxLength(1000);
             b.HasIndex(p => p.NationalId).IsUnique();
+            b.HasIndex(p => p.ProtocolNumber).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
         });
 
@@ -29,10 +53,13 @@ public class AppDbContext : DbContext
         {
             b.Property(d => d.Name).IsRequired().HasMaxLength(100);
             b.Property(d => d.Branch).IsRequired().HasMaxLength(100);
-            b.Property(d => d.Email).IsRequired().HasMaxLength(200);
-            b.Property(d => d.Password).IsRequired().HasMaxLength(200);
-            b.Property(d => d.Role).HasConversion<int>();
-            b.HasIndex(d => d.Email).IsUnique();
+
+            b.HasOne(d => d.User)
+                .WithOne(u => u.Doctor!)
+                .HasForeignKey<Doctor>(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(d => d.UserId).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
         });
 
@@ -55,7 +82,11 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<MedicalRecord>(b =>
         {
+            b.Property(m => m.ChiefComplaint).IsRequired().HasMaxLength(1000);
+            b.Property(m => m.History).HasMaxLength(2000);
+            b.Property(m => m.Examination).HasMaxLength(2000);
             b.Property(m => m.Diagnosis).IsRequired().HasMaxLength(500);
+            b.Property(m => m.TreatmentPlan).HasMaxLength(2000);
 
             b.HasOne(m => m.Appointment)
                 .WithOne(a => a.MedicalRecord)
@@ -63,6 +94,21 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             b.HasIndex(m => m.AppointmentId).IsUnique();
+            b.HasQueryFilter(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<VitalSigns>(b =>
+        {
+            b.Property(v => v.Temperature).HasPrecision(4, 1);
+            b.Property(v => v.Height).HasPrecision(5, 1);
+            b.Property(v => v.Weight).HasPrecision(5, 1);
+
+            b.HasOne(v => v.MedicalRecord)
+                .WithOne(m => m.VitalSigns!)
+                .HasForeignKey<VitalSigns>(v => v.MedicalRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(v => v.MedicalRecordId).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
         });
 

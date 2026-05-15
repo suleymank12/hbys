@@ -10,14 +10,25 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<Patient, PatientDto>()
-            .ForMember(d => d.FullName, o => o.MapFrom(s => $"{s.Name} {s.Surname}"));
-        CreateMap<CreatePatientDto, Patient>();
-        CreateMap<UpdatePatientDto, Patient>();
+            .ForMember(d => d.FullName, o => o.MapFrom(s => $"{s.Name} {s.Surname}"))
+            .ForMember(d => d.GenderText, o => o.MapFrom(s => GetGenderText(s.Gender)))
+            .ForMember(d => d.BloodTypeText, o => o.MapFrom(s => GetBloodTypeText(s.BloodType)))
+            .ForMember(d => d.InsuranceTypeText, o => o.MapFrom(s => GetInsuranceTypeText(s.InsuranceType)));
+        CreateMap<CreatePatientDto, Patient>()
+            .ForMember(d => d.ProtocolNumber, o => o.Ignore());
+        CreateMap<UpdatePatientDto, Patient>()
+            .ForMember(d => d.ProtocolNumber, o => o.Ignore())
+            .ForMember(d => d.NationalId, o => o.Ignore());
 
-        CreateMap<Doctor, DoctorDto>();
+        CreateMap<Doctor, DoctorDto>()
+            .ForMember(d => d.Email,
+                o => o.MapFrom(s => s.User != null ? s.User.Email : string.Empty));
         CreateMap<CreateDoctorDto, Doctor>()
-            .ForMember(d => d.Password, o => o.Ignore());
-        CreateMap<UpdateDoctorDto, Doctor>();
+            .ForMember(d => d.UserId, o => o.Ignore())
+            .ForMember(d => d.User, o => o.Ignore());
+        CreateMap<UpdateDoctorDto, Doctor>()
+            .ForMember(d => d.UserId, o => o.Ignore())
+            .ForMember(d => d.User, o => o.Ignore());
 
         CreateMap<Appointment, AppointmentDto>()
             .ForMember(d => d.PatientFullName,
@@ -44,16 +55,55 @@ public class MappingProfile : Profile
                     ? s.Appointment.Doctor.Branch
                     : string.Empty))
             .ForMember(d => d.AppointmentDate,
-                o => o.MapFrom(s => s.Appointment != null ? s.Appointment.DateTime : default));
-        CreateMap<CreateMedicalRecordDto, MedicalRecord>();
-        CreateMap<UpdateMedicalRecordDto, MedicalRecord>();
+                o => o.MapFrom(s => s.Appointment != null ? s.Appointment.DateTime : default))
+            .ForMember(d => d.VitalSigns,
+                o => o.MapFrom(s => s.VitalSigns));
+        CreateMap<VitalSigns, VitalSignsDto>();
+        CreateMap<CreateMedicalRecordDto, MedicalRecord>()
+            .ForMember(d => d.VitalSigns, o => o.Ignore());
+        CreateMap<UpdateMedicalRecordDto, MedicalRecord>()
+            .ForMember(d => d.AppointmentId, o => o.Ignore())
+            .ForMember(d => d.VitalSigns, o => o.Ignore());
     }
 
     private static string GetStatusText(AppointmentStatus status) => status switch
     {
         AppointmentStatus.Bekliyor => "Bekliyor",
+        AppointmentStatus.Geldi => "Geldi",
+        AppointmentStatus.MuayenedeAlindi => "Muayenede",
         AppointmentStatus.Tamamlandi => "Tamamlandı",
         AppointmentStatus.IptalEdildi => "İptal Edildi",
+        AppointmentStatus.Gelmedi => "Gelmedi",
         _ => status.ToString()
+    };
+
+    private static string GetGenderText(Gender gender) => gender switch
+    {
+        Gender.Erkek => "Erkek",
+        Gender.Kadın => "Kadın",
+        Gender.Belirtilmemiş => "Belirtilmemiş",
+        _ => gender.ToString()
+    };
+
+    private static string? GetBloodTypeText(BloodType? bt) => bt switch
+    {
+        BloodType.ARhPositive => "A Rh+",
+        BloodType.ARhNegative => "A Rh-",
+        BloodType.BRhPositive => "B Rh+",
+        BloodType.BRhNegative => "B Rh-",
+        BloodType.ABRhPositive => "AB Rh+",
+        BloodType.ABRhNegative => "AB Rh-",
+        BloodType.ORhPositive => "0 Rh+",
+        BloodType.ORhNegative => "0 Rh-",
+        _ => null
+    };
+
+    private static string GetInsuranceTypeText(InsuranceType t) => t switch
+    {
+        InsuranceType.SGK => "SGK",
+        InsuranceType.Ozel => "Özel Sigorta",
+        InsuranceType.Yabanci => "Yabancı Uyruklu",
+        InsuranceType.Yok => "Yok",
+        _ => t.ToString()
     };
 }

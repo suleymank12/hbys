@@ -25,16 +25,25 @@ const TIME_SLOTS = (() => {
 const STATUS_STYLES: Record<AppointmentStatus, string> = {
   [AppointmentStatus.Bekliyor]:
     "bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100",
+  [AppointmentStatus.Geldi]:
+    "bg-blue-50 border-blue-300 text-blue-900 hover:bg-blue-100",
+  [AppointmentStatus.MuayenedeAlindi]:
+    "bg-purple-50 border-purple-300 text-purple-900 hover:bg-purple-100",
   [AppointmentStatus.Tamamlandi]:
     "bg-emerald-50 border-emerald-300 text-emerald-900 hover:bg-emerald-100",
   [AppointmentStatus.IptalEdildi]:
     "bg-rose-50 border-rose-300 text-rose-800 hover:bg-rose-100 line-through opacity-80",
+  [AppointmentStatus.Gelmedi]:
+    "bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 opacity-90",
 };
 
 const STATUS_DOT: Record<AppointmentStatus, string> = {
   [AppointmentStatus.Bekliyor]: "bg-amber-500",
+  [AppointmentStatus.Geldi]: "bg-blue-500",
+  [AppointmentStatus.MuayenedeAlindi]: "bg-purple-500",
   [AppointmentStatus.Tamamlandi]: "bg-emerald-500",
   [AppointmentStatus.IptalEdildi]: "bg-rose-500",
+  [AppointmentStatus.Gelmedi]: "bg-slate-400",
 };
 
 const slotKeyOf = (d: Date) => {
@@ -312,10 +321,13 @@ function AppointmentCard({
 
 function Legend() {
   return (
-    <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50 flex items-center gap-4 text-[11px] text-slate-600 flex-wrap">
+    <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50 flex items-center gap-3 text-[11px] text-slate-600 flex-wrap">
       <LegendDot color="bg-amber-400" label="Bekliyor" />
+      <LegendDot color="bg-blue-500" label="Geldi" />
+      <LegendDot color="bg-purple-500" label="Muayenede" />
       <LegendDot color="bg-emerald-500" label="Tamamlandı" />
       <LegendDot color="bg-rose-500" label="İptal" />
+      <LegendDot color="bg-slate-400" label="Gelmedi" />
     </div>
   );
 }

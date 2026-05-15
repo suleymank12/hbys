@@ -9,7 +9,7 @@ namespace MiniHBYS.API.Controllers;
 [Route("api/doctors")]
 [Produces("application/json")]
 [Tags("Doctors")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class DoctorsController : ControllerBase
 {
     private readonly IDoctorService _service;
@@ -53,6 +53,7 @@ public class DoctorsController : ControllerBase
     ///     }
     /// </remarks>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateDoctorDto dto)
@@ -75,6 +76,7 @@ public class DoctorsController : ControllerBase
     ///     }
     /// </remarks>
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateDoctorDto dto)
@@ -85,6 +87,7 @@ public class DoctorsController : ControllerBase
 
     /// <summary>Doktor kaydını siler (soft delete).</summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)

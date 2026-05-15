@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: res.name,
       role: res.role,
       roleText: res.roleText,
+      doctorId: res.doctorId ?? null,
     };
     authService.storeSession(res.token, currentUser);
     setUser(currentUser);

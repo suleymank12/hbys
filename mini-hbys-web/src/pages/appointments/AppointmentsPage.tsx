@@ -5,10 +5,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardPlus,
+  Eye,
   Filter,
   LayoutList,
+  LogIn,
   CalendarRange,
   Plus,
+  Stethoscope,
+  UserX,
   XCircle,
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
@@ -37,15 +41,66 @@ import { useAuth } from "../../contexts/AuthContext";
 import { ExportButton } from "../../components/ui/ExportButton";
 import { exportService } from "../../services/exportService";
 
-type StatusFilter = "all" | "pending" | "completed" | "cancelled";
+type StatusFilter =
+  | "all"
+  | "pending"
+  | "arrived"
+  | "inExam"
+  | "completed"
+  | "cancelled"
+  | "noShow";
 type ViewMode = "list" | "calendar";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Tümü" },
   { value: "pending", label: "Bekliyor" },
+  { value: "arrived", label: "Geldi" },
+  { value: "inExam", label: "Muayenede" },
   { value: "completed", label: "Tamamlandı" },
   { value: "cancelled", label: "İptal Edildi" },
+  { value: "noShow", label: "Gelmedi" },
 ];
+
+const STATUS_FILTER_MAP: Record<Exclude<StatusFilter, "all">, AppointmentStatus> = {
+  pending: AppointmentStatus.Bekliyor,
+  arrived: AppointmentStatus.Geldi,
+  inExam: AppointmentStatus.MuayenedeAlindi,
+  completed: AppointmentStatus.Tamamlandi,
+  cancelled: AppointmentStatus.IptalEdildi,
+  noShow: AppointmentStatus.Gelmedi,
+};
+
+const TRANSITION_TEXT: Record<
+  number,
+  { title: string; message: (name: string) => string; confirmLabel: string }
+> = {
+  [AppointmentStatus.Geldi]: {
+    title: "Hasta Geldi",
+    message: (name) => `${name} adlı hastayı 'Geldi' olarak işaretlemek istiyor musunuz?`,
+    confirmLabel: "Geldi",
+  },
+  [AppointmentStatus.MuayenedeAlindi]: {
+    title: "Muayeneye Al",
+    message: (name) => `${name} adlı hastayı muayeneye almak istiyor musunuz?`,
+    confirmLabel: "Muayeneye Al",
+  },
+  [AppointmentStatus.Tamamlandi]: {
+    title: "Muayeneyi Tamamla",
+    message: (name) => `${name} adlı hastanın muayenesini tamamlamak istiyor musunuz?`,
+    confirmLabel: "Tamamla",
+  },
+  [AppointmentStatus.IptalEdildi]: {
+    title: "Randevuyu İptal Et",
+    message: (name) => `${name} adlı hastanın randevusunu iptal etmek istiyor musunuz?`,
+    confirmLabel: "İptal Et",
+  },
+  [AppointmentStatus.Gelmedi]: {
+    title: "Gelmedi Olarak İşaretle",
+    message: (name) =>
+      `${name} adlı hastanın randevusunu 'Gelmedi' olarak işaretlemek istiyor musunuz?`,
+    confirmLabel: "Gelmedi",
+  },
+};
 
 const startOfWeekMonday = (d: Date): Date => {
   const date = new Date(d);
@@ -60,6 +115,23 @@ const addDays = (d: Date, n: number) => {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
   return x;
+};
+
+const successToast = (next: AppointmentStatus): string => {
+  switch (next) {
+    case AppointmentStatus.Geldi:
+      return "Hasta 'Geldi' olarak işaretlendi.";
+    case AppointmentStatus.MuayenedeAlindi:
+      return "Hasta muayeneye alındı.";
+    case AppointmentStatus.Tamamlandi:
+      return "Muayene tamamlandı.";
+    case AppointmentStatus.IptalEdildi:
+      return "Randevu iptal edildi.";
+    case AppointmentStatus.Gelmedi:
+      return "Randevu 'Gelmedi' olarak işaretlendi.";
+    default:
+      return "Randevu durumu güncellendi.";
+  }
 };
 
 const formatWeekLabel = (weekStart: Date): string => {
@@ -90,7 +162,7 @@ export function AppointmentsPage() {
   const { user, hasRole } = useAuth();
   const isDoctor = hasRole("Doktor");
   const canCreate = hasRole("Admin", "Sekreter");
-  const canCancel = hasRole("Admin", "Sekreter");
+  const canSecretarial = hasRole("Admin", "Sekreter");
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -119,8 +191,8 @@ export function AppointmentsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      if (isDoctor && user) {
-        const a = await appointmentService.listByDoctor(user.id);
+      if (isDoctor && user?.doctorId) {
+        const a = await appointmentService.listByDoctor(user.doctorId);
         setAppointments(a);
         setPatients([]);
         setDoctors([]);
@@ -144,7 +216,7 @@ export function AppointmentsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDoctor, user?.id]);
+  }, [isDoctor, user?.doctorId]);
 
   const doctorOptions = useMemo(
     () => [
@@ -163,20 +235,8 @@ export function AppointmentsPage() {
         if (!isSameDay(new Date(a.dateTime), new Date(filterDate))) return false;
       }
       if (!isDoctor && filterDoctor && String(a.doctorId) !== filterDoctor) return false;
-      if (filterStatus !== "all") {
-        if (filterStatus === "pending" && a.status !== AppointmentStatus.Bekliyor)
-          return false;
-        if (
-          filterStatus === "completed" &&
-          a.status !== AppointmentStatus.Tamamlandi
-        )
-          return false;
-        if (
-          filterStatus === "cancelled" &&
-          a.status !== AppointmentStatus.IptalEdildi
-        )
-          return false;
-      }
+      if (filterStatus !== "all" && a.status !== STATUS_FILTER_MAP[filterStatus])
+        return false;
       return true;
     });
   }, [appointments, filterDate, filterDoctor, filterStatus, isDoctor]);
@@ -206,14 +266,8 @@ export function AppointmentsPage() {
   const calendarAppointments = useMemo(() => {
     return appointments.filter((a) => {
       if (!isDoctor && filterDoctor && String(a.doctorId) !== filterDoctor) return false;
-      if (filterStatus !== "all") {
-        if (filterStatus === "pending" && a.status !== AppointmentStatus.Bekliyor)
-          return false;
-        if (filterStatus === "completed" && a.status !== AppointmentStatus.Tamamlandi)
-          return false;
-        if (filterStatus === "cancelled" && a.status !== AppointmentStatus.IptalEdildi)
-          return false;
-      }
+      if (filterStatus !== "all" && a.status !== STATUS_FILTER_MAP[filterStatus])
+        return false;
       return true;
     });
   }, [appointments, filterDoctor, filterStatus, isDoctor]);
@@ -228,9 +282,7 @@ export function AppointmentsPage() {
     try {
       await appointmentService.updateStatus(statusTarget.appt.id, statusTarget.next);
       toast.success(
-        statusTarget.next === AppointmentStatus.Tamamlandi
-          ? "Randevu tamamlandı."
-          : "Randevu iptal edildi."
+        successToast(statusTarget.next)
       );
       setStatusTarget(null);
       await load();
@@ -401,18 +453,10 @@ export function AppointmentsPage() {
                       <td className="px-5 py-3 text-right">
                         <AppointmentActions
                           appointment={a}
-                          canCancel={canCancel}
-                          onComplete={() =>
-                            setStatusTarget({
-                              appt: a,
-                              next: AppointmentStatus.Tamamlandi,
-                            })
-                          }
-                          onCancel={() =>
-                            setStatusTarget({
-                              appt: a,
-                              next: AppointmentStatus.IptalEdildi,
-                            })
+                          isDoctor={isDoctor}
+                          canSecretarial={canSecretarial}
+                          onStatusChange={(next) =>
+                            setStatusTarget({ appt: a, next })
                           }
                           onAddRecord={() => setRecordTarget(a)}
                         />
@@ -454,25 +498,22 @@ export function AppointmentsPage() {
       <MedicalRecordModal
         open={!!recordTarget}
         appointment={recordTarget}
+        readonly={!isDoctor}
         onClose={() => setRecordTarget(null)}
       />
 
       <ConfirmDialog
         open={!!statusTarget}
-        title={
-          statusTarget?.next === AppointmentStatus.Tamamlandi
-            ? "Randevuyu Tamamla"
-            : "Randevuyu İptal Et"
-        }
+        title={statusTarget ? TRANSITION_TEXT[statusTarget.next]?.title ?? "Randevu Durumu" : ""}
         message={
           statusTarget
-            ? statusTarget.next === AppointmentStatus.Tamamlandi
-              ? `${statusTarget.appt.patientFullName} adlı hastanın randevusunu tamamlandı olarak işaretlemek istiyor musunuz?`
-              : `${statusTarget.appt.patientFullName} adlı hastanın randevusunu iptal etmek istiyor musunuz?`
+            ? TRANSITION_TEXT[statusTarget.next]?.message(
+                statusTarget.appt.patientFullName
+              ) ?? ""
             : ""
         }
         confirmText={
-          statusTarget?.next === AppointmentStatus.Tamamlandi ? "Tamamla" : "İptal Et"
+          statusTarget ? TRANSITION_TEXT[statusTarget.next]?.confirmLabel ?? "Onayla" : ""
         }
         loading={statusLoading}
         onConfirm={confirmStatusChange}
@@ -484,56 +525,102 @@ export function AppointmentsPage() {
 
 function AppointmentActions({
   appointment,
-  canCancel,
-  onComplete,
-  onCancel,
+  isDoctor,
+  canSecretarial,
+  onStatusChange,
   onAddRecord,
 }: {
   appointment: Appointment;
-  canCancel: boolean;
-  onComplete: () => void;
-  onCancel: () => void;
+  isDoctor: boolean;
+  canSecretarial: boolean;
+  onStatusChange: (next: AppointmentStatus) => void;
   onAddRecord: () => void;
 }) {
   if (appointment.status === AppointmentStatus.Bekliyor) {
+    if (!canSecretarial) return <span className="text-xs text-slate-400">—</span>;
     return (
       <div className="inline-flex gap-1">
         <Button
           variant="ghost"
           size="sm"
-          icon={<CheckCircle2 className="w-3.5 h-3.5" />}
-          className="text-emerald-700 hover:bg-emerald-50"
-          onClick={onComplete}
+          icon={<LogIn className="w-3.5 h-3.5" />}
+          className="text-blue-700 hover:bg-blue-50"
+          onClick={() => onStatusChange(AppointmentStatus.Geldi)}
         >
-          Tamamla
+          Geldi
         </Button>
-        {canCancel && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<XCircle className="w-3.5 h-3.5" />}
-            className="text-rose-600 hover:bg-rose-50"
-            onClick={onCancel}
-          >
-            İptal
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<UserX className="w-3.5 h-3.5" />}
+          className="text-slate-600 hover:bg-slate-100"
+          onClick={() => onStatusChange(AppointmentStatus.Gelmedi)}
+        >
+          Gelmedi
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<XCircle className="w-3.5 h-3.5" />}
+          className="text-rose-600 hover:bg-rose-50"
+          onClick={() => onStatusChange(AppointmentStatus.IptalEdildi)}
+        >
+          İptal
+        </Button>
       </div>
     );
   }
+
+  if (appointment.status === AppointmentStatus.Geldi) {
+    if (!isDoctor) return <span className="text-xs text-slate-400">—</span>;
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<Stethoscope className="w-3.5 h-3.5" />}
+        className="text-purple-700 hover:bg-purple-50"
+        onClick={() => onStatusChange(AppointmentStatus.MuayenedeAlindi)}
+      >
+        Muayeneye Al
+      </Button>
+    );
+  }
+
+  if (appointment.status === AppointmentStatus.MuayenedeAlindi) {
+    if (!isDoctor) return <span className="text-xs text-slate-400">—</span>;
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+        className="text-emerald-700 hover:bg-emerald-50"
+        onClick={() => onStatusChange(AppointmentStatus.Tamamlandi)}
+      >
+        Tamamla
+      </Button>
+    );
+  }
+
   if (appointment.status === AppointmentStatus.Tamamlandi) {
     return (
       <Button
         variant="ghost"
         size="sm"
-        icon={<ClipboardPlus className="w-3.5 h-3.5" />}
+        icon={
+          isDoctor ? (
+            <ClipboardPlus className="w-3.5 h-3.5" />
+          ) : (
+            <Eye className="w-3.5 h-3.5" />
+          )
+        }
         className="text-medical-700 hover:bg-medical-50"
         onClick={onAddRecord}
       >
-        Muayene Kaydı
+        {isDoctor ? "Muayene Kaydı" : "Görüntüle"}
       </Button>
     );
   }
+
   return <span className="text-xs text-slate-400">—</span>;
 }
 
