@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   "/doctors": "Doktorlar",
   "/appointments": "Randevular",
   "/medical-records": "Muayene Kayıtları",
+  "/audit-logs": "Denetim Kayıtları",
 };
 
 interface HeaderProps {

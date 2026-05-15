@@ -15,11 +15,19 @@ public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
     private readonly IConfiguration _config;
+    private readonly IAuditService _audit;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _accessor;
 
-    public AuthService(AppDbContext context, IConfiguration config)
+    public AuthService(
+        AppDbContext context,
+        IConfiguration config,
+        IAuditService audit,
+        Microsoft.AspNetCore.Http.IHttpContextAccessor accessor)
     {
         _context = context;
         _config = config;
+        _audit = audit;
+        _accessor = accessor;
     }
 
     public async Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginDto dto)
@@ -33,13 +41,38 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
+        {
+            await _audit.LogForAsync(
+                userId: user?.Id ?? 0,
+                userName: user?.Name ?? "Bilinmiyor",
+                userRole: user?.Role.ToString() ?? "Bilinmiyor",
+                entityType: "User",
+                entityId: user?.Id ?? 0,
+                action: "LoginFailed",
+                details: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    email = dto.Email,
+                    reason = user is null ? "Kullanıcı bulunamadı" : "Şifre hatalı"
+                }),
+                ipAddress: _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString());
             return ApiResponse<LoginResponseDto>.Fail("E-posta veya şifre hatalı.");
+        }
 
         var doctorId = user.Role == UserRole.Doktor ? user.Doctor?.Id : null;
 
         var expireMinutes = int.Parse(_config["Jwt:ExpireMinutes"] ?? "480");
         var expiresAt = DateTime.UtcNow.AddMinutes(expireMinutes);
         var token = GenerateJwtToken(user.Id, user.Email, user.Name, user.Role, doctorId, expiresAt);
+
+        await _audit.LogForAsync(
+            userId: user.Id,
+            userName: user.Name,
+            userRole: user.Role.ToString(),
+            entityType: "User",
+            entityId: user.Id,
+            action: "Login",
+            details: null,
+            ipAddress: _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString());
 
         return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto
         {

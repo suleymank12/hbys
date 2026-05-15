@@ -77,6 +77,8 @@ public class MappingProfile : Profile
                     ? s.MedicalRecord.Appointment.Doctor.Branch
                     : string.Empty));
         CreateMap<PrescriptionItem, PrescriptionItemDto>();
+
+        CreateMap<AuditLog, AuditLogDto>();
         CreateMap<CreateMedicalRecordDto, MedicalRecord>()
             .ForMember(d => d.VitalSigns, o => o.Ignore());
         CreateMap<UpdateMedicalRecordDto, MedicalRecord>()

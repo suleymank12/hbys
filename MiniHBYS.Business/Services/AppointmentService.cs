@@ -14,11 +14,13 @@ public class AppointmentService : IAppointmentService
 
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IAuditService _audit;
 
-    public AppointmentService(AppDbContext context, IMapper mapper)
+    public AppointmentService(AppDbContext context, IMapper mapper, IAuditService audit)
     {
         _context = context;
         _mapper = mapper;
+        _audit = audit;
     }
 
     public async Task<ApiResponse<IEnumerable<AppointmentDto>>> GetAllAsync()
@@ -88,6 +90,14 @@ public class AppointmentService : IAppointmentService
         _context.Appointments.Add(entity);
         await _context.SaveChangesAsync();
 
+        await _audit.LogAsync("Appointment", entity.Id, "Create",
+            System.Text.Json.JsonSerializer.Serialize(new
+            {
+                patientId = entity.PatientId,
+                doctorId = entity.DoctorId,
+                dateTime = entity.DateTime
+            }));
+
         var created = await BaseQuery().FirstAsync(a => a.Id == entity.Id);
         return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(created), "Randevu oluşturuldu.");
     }
@@ -105,9 +115,17 @@ public class AppointmentService : IAppointmentService
         if (!allowedRoles.Contains(role))
             return ApiResponse<AppointmentDto>.Fail("Bu statü değişikliği için yetkiniz yok.");
 
+        var oldStatus = entity.Status;
         entity.Status = dto.Status;
         entity.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        await _audit.LogAsync("Appointment", entity.Id, "StatusChange",
+            System.Text.Json.JsonSerializer.Serialize(new
+            {
+                from = StatusText(oldStatus),
+                to = StatusText(entity.Status)
+            }));
 
         var updated = await BaseQuery().FirstAsync(a => a.Id == entity.Id);
         return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(updated), "Randevu durumu güncellendi.");

@@ -11,11 +11,13 @@ public class PrescriptionService : IPrescriptionService
 {
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IAuditService _audit;
 
-    public PrescriptionService(AppDbContext context, IMapper mapper)
+    public PrescriptionService(AppDbContext context, IMapper mapper, IAuditService audit)
     {
         _context = context;
         _mapper = mapper;
+        _audit = audit;
     }
 
     public async Task<ApiResponse<PrescriptionDto>> GetByMedicalRecordIdAsync(int medicalRecordId)
@@ -74,6 +76,9 @@ public class PrescriptionService : IPrescriptionService
         _context.Prescriptions.Add(entity);
         await _context.SaveChangesAsync();
 
+        await _audit.LogAsync("Prescription", entity.Id, "Create",
+            $"Reçete oluşturuldu: {entity.PrescriptionNumber} ({entity.Items.Count} ilaç)");
+
         var created = await BaseQuery().FirstAsync(p => p.Id == entity.Id);
         return ApiResponse<PrescriptionDto>.Ok(_mapper.Map<PrescriptionDto>(created), "Reçete oluşturuldu.");
     }
@@ -100,6 +105,9 @@ public class PrescriptionService : IPrescriptionService
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        await _audit.LogAsync("Prescription", entity.Id, "Update",
+            $"Reçete güncellendi: {entity.PrescriptionNumber} ({entity.Items.Count} ilaç)");
 
         var updated = await BaseQuery().FirstAsync(p => p.Id == entity.Id);
         return ApiResponse<PrescriptionDto>.Ok(_mapper.Map<PrescriptionDto>(updated), "Reçete güncellendi.");

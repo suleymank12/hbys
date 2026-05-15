@@ -30,6 +30,8 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IIcd10Service, Icd10Service>();
 builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 

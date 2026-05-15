@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MiniHBYS.Core\MiniHBYS.Core.csproj" />
     <ProjectReference Include="..\MiniHBYS.DataAccess\MiniHBYS.DataAccess.csproj" />
   </ItemGroup>

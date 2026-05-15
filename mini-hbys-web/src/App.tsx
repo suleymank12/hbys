@@ -6,6 +6,7 @@ import { PatientsPage } from "./pages/patients/PatientsPage";
 import { DoctorsPage } from "./pages/doctors/DoctorsPage";
 import { AppointmentsPage } from "./pages/appointments/AppointmentsPage";
 import { MedicalRecordsPage } from "./pages/medical-records/MedicalRecordsPage";
+import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import type { UserRoleName } from "./types";
@@ -97,6 +98,14 @@ function App() {
               element={
                 <RequireRole roles={["Admin", "Doktor"]}>
                   <MedicalRecordsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="audit-logs"
+              element={
+                <RequireRole roles={["Admin"]}>
+                  <AuditLogsPage />
                 </RequireRole>
               }
             />

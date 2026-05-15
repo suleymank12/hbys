@@ -12,11 +12,13 @@ public class MedicalRecordService : IMedicalRecordService
 {
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IAuditService _audit;
 
-    public MedicalRecordService(AppDbContext context, IMapper mapper)
+    public MedicalRecordService(AppDbContext context, IMapper mapper, IAuditService audit)
     {
         _context = context;
         _mapper = mapper;
+        _audit = audit;
     }
 
     public async Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetAllAsync()
@@ -96,6 +98,9 @@ public class MedicalRecordService : IMedicalRecordService
             await _context.SaveChangesAsync();
         }
 
+        await _audit.LogAsync("MedicalRecord", entity.Id, "Create",
+            $"Muayene kaydı oluşturuldu. Tanı: {entity.Diagnosis}{(entity.DiagnosisCode is null ? "" : $" ({entity.DiagnosisCode})")}");
+
         var created = await BaseQuery().FirstAsync(m => m.Id == entity.Id);
         return ApiResponse<MedicalRecordDto>.Ok(_mapper.Map<MedicalRecordDto>(created), "Muayene kaydı oluşturuldu.");
     }
@@ -141,6 +146,9 @@ public class MedicalRecordService : IMedicalRecordService
         }
 
         await _context.SaveChangesAsync();
+
+        await _audit.LogAsync("MedicalRecord", entity.Id, "Update",
+            $"Muayene kaydı güncellendi. Tanı: {entity.Diagnosis}{(entity.DiagnosisCode is null ? "" : $" ({entity.DiagnosisCode})")}");
 
         var updated = await BaseQuery().FirstAsync(m => m.Id == entity.Id);
         return ApiResponse<MedicalRecordDto>.Ok(_mapper.Map<MedicalRecordDto>(updated), "Muayene kaydı güncellendi.");

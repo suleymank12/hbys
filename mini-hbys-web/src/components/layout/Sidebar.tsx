@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ClipboardList,
   HeartPulse,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -51,6 +52,12 @@ const navItems: NavItem[] = [
     label: "Muayene Kayıtları",
     icon: ClipboardList,
     roles: ["Admin", "Doktor"],
+  },
+  {
+    to: "/audit-logs",
+    label: "Denetim Kayıtları",
+    icon: ShieldCheck,
+    roles: ["Admin"],
   },
 ];
 

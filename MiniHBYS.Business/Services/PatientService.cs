@@ -11,11 +11,13 @@ public class PatientService : IPatientService
 {
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IAuditService _audit;
 
-    public PatientService(AppDbContext context, IMapper mapper)
+    public PatientService(AppDbContext context, IMapper mapper, IAuditService audit)
     {
         _context = context;
         _mapper = mapper;
+        _audit = audit;
     }
 
     public async Task<ApiResponse<IEnumerable<PatientDto>>> GetAllAsync()
@@ -56,6 +58,9 @@ public class PatientService : IPatientService
         _context.Patients.Add(entity);
         await _context.SaveChangesAsync();
 
+        await _audit.LogAsync("Patient", entity.Id, "Create",
+            $"Yeni hasta: {entity.ProtocolNumber} - {entity.Name} {entity.Surname}");
+
         return ApiResponse<PatientDto>.Ok(_mapper.Map<PatientDto>(entity), "Hasta başarıyla oluşturuldu.");
     }
 
@@ -82,6 +87,10 @@ public class PatientService : IPatientService
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        await _audit.LogAsync("Patient", entity.Id, "Update",
+            $"Hasta güncellendi: {entity.ProtocolNumber}");
+
         return ApiResponse<PatientDto>.Ok(_mapper.Map<PatientDto>(entity), "Hasta bilgileri güncellendi.");
     }
 
@@ -93,6 +102,9 @@ public class PatientService : IPatientService
         entity.IsActive = false;
         entity.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        await _audit.LogAsync("Patient", entity.Id, "Delete",
+            $"Hasta pasifleştirildi: {entity.ProtocolNumber}");
 
         return ApiResponse<bool>.Ok(true, "Hasta kaydı silindi.");
     }

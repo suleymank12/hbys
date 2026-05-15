@@ -185,6 +185,19 @@ export interface UpdateAppointmentStatusDto {
   status: AppointmentStatus;
 }
 
+export interface AuditLog {
+  id: number;
+  userId: number;
+  userName: string;
+  userRole: string;
+  entityType: string;
+  entityId: number;
+  action: string;
+  details?: string | null;
+  ipAddress?: string | null;
+  timestamp: string;
+}
+
 export interface PrescriptionItem {
   id?: number;
   medicationName: string;

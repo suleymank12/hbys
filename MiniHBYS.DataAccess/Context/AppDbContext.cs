@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Icd10Code> Icd10Codes => Set<Icd10Code>();
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
     public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -154,6 +155,20 @@ public class AppDbContext : DbContext
 
             b.HasIndex(v => v.MedicalRecordId).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<AuditLog>(b =>
+        {
+            b.Property(a => a.UserName).IsRequired().HasMaxLength(200);
+            b.Property(a => a.UserRole).IsRequired().HasMaxLength(50);
+            b.Property(a => a.EntityType).IsRequired().HasMaxLength(100);
+            b.Property(a => a.Action).IsRequired().HasMaxLength(50);
+            b.Property(a => a.Details).HasMaxLength(2000);
+            b.Property(a => a.IpAddress).HasMaxLength(64);
+
+            b.HasIndex(a => a.UserId);
+            b.HasIndex(a => new { a.EntityType, a.EntityId });
+            b.HasIndex(a => a.Timestamp);
         });
 
         base.OnModelCreating(modelBuilder);
