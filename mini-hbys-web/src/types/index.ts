@@ -6,11 +6,44 @@ export const AppointmentStatus = {
 
 export type AppointmentStatus = (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
 
+export const UserRole = {
+  Admin: 0,
+  Doktor: 1,
+  Sekreter: 2,
+} as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+export type UserRoleName = "Admin" | "Doktor" | "Sekreter";
+
 export interface ApiResponse<T> {
   success: boolean;
   message?: string | null;
   data?: T | null;
   errors?: string[] | null;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  id: number;
+  token: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  roleText: string;
+  expiresAt: string;
+}
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+  roleText: string;
 }
 
 export interface Patient {

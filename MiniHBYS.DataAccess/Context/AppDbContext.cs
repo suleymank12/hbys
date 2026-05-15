@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
             b.Property(d => d.Branch).IsRequired().HasMaxLength(100);
             b.Property(d => d.Email).IsRequired().HasMaxLength(200);
             b.Property(d => d.Password).IsRequired().HasMaxLength(200);
+            b.Property(d => d.Role).HasConversion<int>();
             b.HasIndex(d => d.Email).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
         });

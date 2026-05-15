@@ -11,12 +11,21 @@ public static class DbSeeder
     {
         await context.Database.MigrateAsync();
 
-        if (await context.Doctors.AnyAsync() || await context.Patients.AnyAsync())
+        await SeedSystemUsersAsync(context);
+
+        if (await context.Patients.AnyAsync())
             return;
 
-        var doctors = SeedDoctors();
-        await context.Doctors.AddRangeAsync(doctors);
-        await context.SaveChangesAsync();
+        var doctors = await context.Doctors
+            .Where(d => d.Role == UserRole.Doktor)
+            .ToListAsync();
+
+        if (!doctors.Any())
+        {
+            doctors = SeedDoctors();
+            await context.Doctors.AddRangeAsync(doctors);
+            await context.SaveChangesAsync();
+        }
 
         var patients = SeedPatients();
         await context.Patients.AddRangeAsync(patients);
@@ -28,6 +37,31 @@ public static class DbSeeder
 
         var records = SeedMedicalRecords(appointments);
         await context.MedicalRecords.AddRangeAsync(records);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedSystemUsersAsync(AppDbContext context)
+    {
+        var systemUsers = new (string Name, string Branch, string Email, string Password, UserRole Role)[]
+        {
+            ("Sistem Yöneticisi", "Yönetim", "admin@minihbys.com",     "Admin123!",    UserRole.Admin),
+            ("Sekreter",           "Sekreterlik", "sekreter@minihbys.com", "Sekreter123!", UserRole.Sekreter)
+        };
+
+        foreach (var u in systemUsers)
+        {
+            if (await context.Doctors.AnyAsync(d => d.Email == u.Email))
+                continue;
+
+            await context.Doctors.AddAsync(new Doctor
+            {
+                Name = u.Name,
+                Branch = u.Branch,
+                Email = u.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(u.Password),
+                Role = u.Role
+            });
+        }
         await context.SaveChangesAsync();
     }
 
@@ -53,7 +87,8 @@ public static class DbSeeder
             Name = d.Name,
             Branch = d.Branch,
             Email = d.Email,
-            Password = password
+            Password = password,
+            Role = UserRole.Doktor
         }).ToList();
     }
 

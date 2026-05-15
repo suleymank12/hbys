@@ -39,6 +39,12 @@ export const medicalRecordService = {
     );
     return unwrap(data);
   },
+  getByDoctor: async (doctorId: number): Promise<MedicalRecord[]> => {
+    const { data } = await apiClient.get<ApiResponse<MedicalRecord[]>>(
+      `/medical-records/doctor/${doctorId}`
+    );
+    return unwrap(data);
+  },
   create: async (dto: CreateMedicalRecordDto): Promise<MedicalRecord> => {
     const { data } = await apiClient.post<ApiResponse<MedicalRecord>>(
       "/medical-records",

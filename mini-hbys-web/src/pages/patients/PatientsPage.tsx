@@ -13,8 +13,13 @@ import type {
 } from "../../types";
 import { PatientFormModal } from "./PatientFormModal";
 import { PatientHistoryModal } from "./PatientHistoryModal";
+import { useAuth } from "../../contexts/AuthContext";
+import { ExportButton } from "../../components/ui/ExportButton";
+import { exportService } from "../../services/exportService";
 
 export function PatientsPage() {
+  const { hasRole } = useAuth();
+  const canWrite = hasRole("Admin", "Sekreter");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -108,9 +113,14 @@ export function PatientsPage() {
                        transition-colors"
           />
         </div>
-        <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>
-          Yeni Hasta Ekle
-        </Button>
+        {canWrite && (
+          <div className="flex items-center gap-2">
+            <ExportButton onExport={() => exportService.patients()} />
+            <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>
+              Yeni Hasta Ekle
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -171,23 +181,27 @@ export function PatientsPage() {
                         >
                           Geçmiş
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={<Pencil className="w-3.5 h-3.5" />}
-                          onClick={() => openEdit(p)}
-                        >
-                          Düzenle
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-rose-600 hover:bg-rose-50"
-                          icon={<Trash2 className="w-3.5 h-3.5" />}
-                          onClick={() => setDeleteTarget(p)}
-                        >
-                          Sil
-                        </Button>
+                        {canWrite && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Pencil className="w-3.5 h-3.5" />}
+                              onClick={() => openEdit(p)}
+                            >
+                              Düzenle
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-rose-600 hover:bg-rose-50"
+                              icon={<Trash2 className="w-3.5 h-3.5" />}
+                              onClick={() => setDeleteTarget(p)}
+                            >
+                              Sil
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -204,12 +218,14 @@ export function PatientsPage() {
         )}
       </div>
 
-      <PatientFormModal
-        open={modalOpen}
-        patient={editing}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSubmit}
-      />
+      {canWrite && (
+        <PatientFormModal
+          open={modalOpen}
+          patient={editing}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      )}
 
       <PatientHistoryModal
         open={!!historyTarget}

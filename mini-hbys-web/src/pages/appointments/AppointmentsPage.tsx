@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardPlus,
   Filter,
+  LayoutList,
+  CalendarRange,
   Plus,
   XCircle,
 } from "lucide-react";
@@ -26,9 +30,15 @@ import {
   type Patient,
 } from "../../types";
 import { AppointmentFormModal } from "./AppointmentFormModal";
+import { AppointmentCalendar } from "./AppointmentCalendar";
+import { AppointmentDetailModal } from "./AppointmentDetailModal";
 import { MedicalRecordModal } from "./MedicalRecordModal";
+import { useAuth } from "../../contexts/AuthContext";
+import { ExportButton } from "../../components/ui/ExportButton";
+import { exportService } from "../../services/exportService";
 
 type StatusFilter = "all" | "pending" | "completed" | "cancelled";
+type ViewMode = "list" | "calendar";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Tümü" },
@@ -37,7 +47,51 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "İptal Edildi" },
 ];
 
+const startOfWeekMonday = (d: Date): Date => {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay(); // 0=Sun, 1=Mon..6=Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return date;
+};
+
+const addDays = (d: Date, n: number) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
+
+const formatWeekLabel = (weekStart: Date): string => {
+  const end = addDays(weekStart, 4);
+  if (weekStart.getMonth() === end.getMonth()) {
+    return `${format(weekStart, "d", { locale: tr })}-${format(end, "d MMMM yyyy", {
+      locale: tr,
+    })}`;
+  }
+  if (weekStart.getFullYear() === end.getFullYear()) {
+    return `${format(weekStart, "d MMM", { locale: tr })} – ${format(
+      end,
+      "d MMM yyyy",
+      { locale: tr }
+    )}`;
+  }
+  return `${format(weekStart, "d MMM yyyy", { locale: tr })} – ${format(
+    end,
+    "d MMM yyyy",
+    { locale: tr }
+  )}`;
+};
+
+const toDateInputValue = (d: Date) => format(d, "yyyy-MM-dd");
+const toTimeInputValue = (d: Date) => format(d, "HH:mm");
+
 export function AppointmentsPage() {
+  const { user, hasRole } = useAuth();
+  const isDoctor = hasRole("Doktor");
+  const canCreate = hasRole("Admin", "Sekreter");
+  const canCancel = hasRole("Admin", "Sekreter");
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -48,6 +102,9 @@ export function AppointmentsPage() {
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalInitial, setModalInitial] = useState<{ date: string; time: string } | null>(
+    null
+  );
   const [recordTarget, setRecordTarget] = useState<Appointment | null>(null);
   const [statusTarget, setStatusTarget] = useState<{
     appt: Appointment;
@@ -55,17 +112,28 @@ export function AppointmentsPage() {
   } | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
 
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMonday(new Date()));
+  const [detailTarget, setDetailTarget] = useState<Appointment | null>(null);
+
   const load = async () => {
     setLoading(true);
     try {
-      const [a, p, d] = await Promise.all([
-        appointmentService.list(),
-        patientService.list(),
-        doctorService.list(),
-      ]);
-      setAppointments(a);
-      setPatients(p);
-      setDoctors(d);
+      if (isDoctor && user) {
+        const a = await appointmentService.listByDoctor(user.id);
+        setAppointments(a);
+        setPatients([]);
+        setDoctors([]);
+      } else {
+        const [a, p, d] = await Promise.all([
+          appointmentService.list(),
+          patientService.list(),
+          doctorService.list(),
+        ]);
+        setAppointments(a);
+        setPatients(p);
+        setDoctors(d);
+      }
     } catch {
       /* interceptor */
     } finally {
@@ -75,7 +143,8 @@ export function AppointmentsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDoctor, user?.id]);
 
   const doctorOptions = useMemo(
     () => [
@@ -93,7 +162,7 @@ export function AppointmentsPage() {
       if (filterDate) {
         if (!isSameDay(new Date(a.dateTime), new Date(filterDate))) return false;
       }
-      if (filterDoctor && String(a.doctorId) !== filterDoctor) return false;
+      if (!isDoctor && filterDoctor && String(a.doctorId) !== filterDoctor) return false;
       if (filterStatus !== "all") {
         if (filterStatus === "pending" && a.status !== AppointmentStatus.Bekliyor)
           return false;
@@ -110,18 +179,48 @@ export function AppointmentsPage() {
       }
       return true;
     });
-  }, [appointments, filterDate, filterDoctor, filterStatus]);
+  }, [appointments, filterDate, filterDoctor, filterStatus, isDoctor]);
 
   const handleCreate = async (dto: CreateAppointmentDto) => {
     try {
       await appointmentService.create(dto);
       toast.success("Randevu oluşturuldu.");
       setModalOpen(false);
+      setModalInitial(null);
       await load();
     } catch {
       /* interceptor — conflict message shown via toast */
     }
   };
+
+  const openCreateModal = (initial?: { date: string; time: string }) => {
+    setModalInitial(initial ?? null);
+    setModalOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    setModalOpen(false);
+    setModalInitial(null);
+  };
+
+  const calendarAppointments = useMemo(() => {
+    return appointments.filter((a) => {
+      if (!isDoctor && filterDoctor && String(a.doctorId) !== filterDoctor) return false;
+      if (filterStatus !== "all") {
+        if (filterStatus === "pending" && a.status !== AppointmentStatus.Bekliyor)
+          return false;
+        if (filterStatus === "completed" && a.status !== AppointmentStatus.Tamamlandi)
+          return false;
+        if (filterStatus === "cancelled" && a.status !== AppointmentStatus.IptalEdildi)
+          return false;
+      }
+      return true;
+    });
+  }, [appointments, filterDoctor, filterStatus, isDoctor]);
+
+  const goToday = () => setWeekStart(startOfWeekMonday(new Date()));
+  const prevWeek = () => setWeekStart((d) => addDays(d, -7));
+  const nextWeek = () => setWeekStart((d) => addDays(d, 7));
 
   const confirmStatusChange = async () => {
     if (!statusTarget) return;
@@ -147,7 +246,7 @@ export function AppointmentsPage() {
     setFilterDoctor("");
     setFilterStatus("all");
   };
-  const hasFilter = !!filterDate || !!filterDoctor || filterStatus !== "all";
+  const hasFilter = !!filterDate || (!isDoctor && !!filterDoctor) || filterStatus !== "all";
 
   return (
     <div className="space-y-5">
@@ -156,6 +255,11 @@ export function AppointmentsPage() {
           <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <Filter className="w-4 h-4 text-slate-500" />
             Filtreler
+            {isDoctor && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-medical-50 text-medical-700">
+                Sadece kendi randevularınız
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {hasFilter && (
@@ -163,26 +267,49 @@ export function AppointmentsPage() {
                 Temizle
               </Button>
             )}
-            <Button onClick={() => setModalOpen(true)} icon={<Plus className="w-4 h-4" />}>
-              Yeni Randevu
-            </Button>
+            <ExportButton
+              onExport={() =>
+                exportService.appointments(
+                  filterDate ? { startDate: filterDate, endDate: filterDate } : {}
+                )
+              }
+            />
+            {canCreate && (
+              <Button onClick={() => openCreateModal()} icon={<Plus className="w-4 h-4" />}>
+                Yeni Randevu
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <DatePicker
-            label="Tarih"
-            value={filterDate}
-            onChange={setFilterDate}
-            placeholder="Tüm tarihler"
-          />
-          <Select
-            label="Doktor"
-            value={filterDoctor}
-            onChange={setFilterDoctor}
-            options={doctorOptions}
-            placeholder="Tüm doktorlar"
-          />
+        <div
+          className={`grid grid-cols-1 gap-3 ${
+            viewMode === "calendar"
+              ? isDoctor
+                ? "sm:grid-cols-1"
+                : "sm:grid-cols-2"
+              : isDoctor
+              ? "sm:grid-cols-2"
+              : "sm:grid-cols-3"
+          }`}
+        >
+          {viewMode === "list" && (
+            <DatePicker
+              label="Tarih"
+              value={filterDate}
+              onChange={setFilterDate}
+              placeholder="Tüm tarihler"
+            />
+          )}
+          {!isDoctor && (
+            <Select
+              label="Doktor"
+              value={filterDoctor}
+              onChange={setFilterDoctor}
+              options={doctorOptions}
+              placeholder="Tüm doktorlar"
+            />
+          )}
           <Select
             label="Durum"
             value={filterStatus}
@@ -192,6 +319,30 @@ export function AppointmentsPage() {
         </div>
       </div>
 
+      <ViewModeToolbar
+        viewMode={viewMode}
+        onChange={setViewMode}
+        weekStart={weekStart}
+        onPrev={prevWeek}
+        onNext={nextWeek}
+        onToday={goToday}
+      />
+
+      {viewMode === "calendar" ? (
+        <AppointmentCalendar
+          appointments={calendarAppointments}
+          weekStart={weekStart}
+          canCreate={canCreate}
+          onAppointmentClick={(a) => setDetailTarget(a)}
+          onSlotClick={(d) => {
+            if (!canCreate) return;
+            openCreateModal({
+              date: toDateInputValue(d),
+              time: toTimeInputValue(d),
+            });
+          }}
+        />
+      ) : (
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -221,6 +372,8 @@ export function AppointmentsPage() {
                     <CalendarDays className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     {hasFilter
                       ? "Filtreyle eşleşen randevu bulunamadı."
+                      : isDoctor
+                      ? "Size atanmış randevu bulunmuyor."
                       : "Henüz randevu yok."}
                   </td>
                 </tr>
@@ -248,6 +401,7 @@ export function AppointmentsPage() {
                       <td className="px-5 py-3 text-right">
                         <AppointmentActions
                           appointment={a}
+                          canCancel={canCancel}
                           onComplete={() =>
                             setStatusTarget({
                               appt: a,
@@ -277,15 +431,25 @@ export function AppointmentsPage() {
           </div>
         )}
       </div>
+      )}
 
-      <AppointmentFormModal
-        open={modalOpen}
-        patients={patients}
-        doctors={doctors}
-        appointments={appointments}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleCreate}
+      <AppointmentDetailModal
+        appointment={detailTarget}
+        onClose={() => setDetailTarget(null)}
       />
+
+      {canCreate && (
+        <AppointmentFormModal
+          open={modalOpen}
+          patients={patients}
+          doctors={doctors}
+          appointments={appointments}
+          onClose={closeCreateModal}
+          onSubmit={handleCreate}
+          initialDate={modalInitial?.date}
+          initialTime={modalInitial?.time}
+        />
+      )}
 
       <MedicalRecordModal
         open={!!recordTarget}
@@ -320,11 +484,13 @@ export function AppointmentsPage() {
 
 function AppointmentActions({
   appointment,
+  canCancel,
   onComplete,
   onCancel,
   onAddRecord,
 }: {
   appointment: Appointment;
+  canCancel: boolean;
   onComplete: () => void;
   onCancel: () => void;
   onAddRecord: () => void;
@@ -341,15 +507,17 @@ function AppointmentActions({
         >
           Tamamla
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<XCircle className="w-3.5 h-3.5" />}
-          className="text-rose-600 hover:bg-rose-50"
-          onClick={onCancel}
-        >
-          İptal
-        </Button>
+        {canCancel && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<XCircle className="w-3.5 h-3.5" />}
+            className="text-rose-600 hover:bg-rose-50"
+            onClick={onCancel}
+          >
+            İptal
+          </Button>
+        )}
       </div>
     );
   }
@@ -367,4 +535,90 @@ function AppointmentActions({
     );
   }
   return <span className="text-xs text-slate-400">—</span>;
+}
+
+function ViewModeToolbar({
+  viewMode,
+  onChange,
+  weekStart,
+  onPrev,
+  onNext,
+  onToday,
+}: {
+  viewMode: ViewMode;
+  onChange: (v: ViewMode) => void;
+  weekStart: Date;
+  onPrev: () => void;
+  onNext: () => void;
+  onToday: () => void;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm self-start">
+        <ToggleButton
+          active={viewMode === "list"}
+          onClick={() => onChange("list")}
+          icon={<LayoutList className="w-3.5 h-3.5" />}
+        >
+          Liste
+        </ToggleButton>
+        <ToggleButton
+          active={viewMode === "calendar"}
+          onClick={() => onChange("calendar")}
+          icon={<CalendarRange className="w-3.5 h-3.5" />}
+        >
+          Takvim
+        </ToggleButton>
+      </div>
+
+      {viewMode === "calendar" && (
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={onPrev} icon={<ChevronLeft className="w-3.5 h-3.5" />}>
+            <span className="hidden sm:inline">Önceki Hafta</span>
+          </Button>
+          <div className="px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm font-medium text-slate-700 min-w-[180px] text-center">
+            {formatWeekLabel(weekStart)}
+          </div>
+          <Button variant="secondary" size="sm" onClick={onNext}>
+            <span className="hidden sm:inline">Sonraki Hafta</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onToday}>
+            Bugün
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToggleButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
+        transition-colors
+        ${
+          active
+            ? "bg-medical-600 text-white shadow-sm"
+            : "text-slate-600 hover:bg-slate-50"
+        }
+      `}
+    >
+      {icon}
+      {children}
+    </button>
+  );
 }

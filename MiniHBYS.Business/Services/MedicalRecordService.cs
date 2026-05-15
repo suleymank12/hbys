@@ -50,6 +50,15 @@ public class MedicalRecordService : IMedicalRecordService
         return ApiResponse<IEnumerable<MedicalRecordDto>>.Ok(_mapper.Map<IEnumerable<MedicalRecordDto>>(list));
     }
 
+    public async Task<ApiResponse<IEnumerable<MedicalRecordDto>>> GetByDoctorIdAsync(int doctorId)
+    {
+        var list = await BaseQuery()
+            .Where(m => m.Appointment.DoctorId == doctorId)
+            .OrderByDescending(m => m.Appointment.DateTime)
+            .ToListAsync();
+        return ApiResponse<IEnumerable<MedicalRecordDto>>.Ok(_mapper.Map<IEnumerable<MedicalRecordDto>>(list));
+    }
+
     public async Task<ApiResponse<MedicalRecordDto>> CreateAsync(CreateMedicalRecordDto dto)
     {
         var appointment = await _context.Appointments.FirstOrDefaultAsync(a => a.Id == dto.AppointmentId);

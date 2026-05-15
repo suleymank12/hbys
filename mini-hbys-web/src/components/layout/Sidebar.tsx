@@ -8,13 +8,50 @@ import {
   HeartPulse,
   X,
 } from "lucide-react";
+import type { ComponentType } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import type { UserRoleName } from "../../types";
 
-const navItems = [
-  { to: "/", label: "Gösterge Paneli", icon: LayoutDashboard, end: true },
-  { to: "/patients", label: "Hastalar", icon: Users },
-  { to: "/doctors", label: "Doktorlar", icon: Stethoscope },
-  { to: "/appointments", label: "Randevular", icon: CalendarDays },
-  { to: "/medical-records", label: "Muayene Kayıtları", icon: ClipboardList },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  end?: boolean;
+  roles: UserRoleName[];
+}
+
+const navItems: NavItem[] = [
+  {
+    to: "/",
+    label: "Gösterge Paneli",
+    icon: LayoutDashboard,
+    end: true,
+    roles: ["Admin", "Doktor", "Sekreter"],
+  },
+  {
+    to: "/patients",
+    label: "Hastalar",
+    icon: Users,
+    roles: ["Admin", "Doktor", "Sekreter"],
+  },
+  {
+    to: "/doctors",
+    label: "Doktorlar",
+    icon: Stethoscope,
+    roles: ["Admin"],
+  },
+  {
+    to: "/appointments",
+    label: "Randevular",
+    icon: CalendarDays,
+    roles: ["Admin", "Doktor", "Sekreter"],
+  },
+  {
+    to: "/medical-records",
+    label: "Muayene Kayıtları",
+    icon: ClipboardList,
+    roles: ["Admin", "Doktor"],
+  },
 ];
 
 interface SidebarProps {
@@ -23,6 +60,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { hasRole } = useAuth();
+  const visibleItems = navItems.filter((item) => hasRole(...item.roles));
+
   return (
     <>
       {isOpen && (
@@ -60,7 +100,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {visibleItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}

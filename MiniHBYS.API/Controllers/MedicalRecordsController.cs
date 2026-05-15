@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniHBYS.Core.DTOs;
 using MiniHBYS.Core.Interfaces;
@@ -8,6 +9,7 @@ namespace MiniHBYS.API.Controllers;
 [Route("api/medical-records")]
 [Produces("application/json")]
 [Tags("MedicalRecords")]
+[Authorize]
 public class MedicalRecordsController : ControllerBase
 {
     private readonly IMedicalRecordService _service;
@@ -28,6 +30,12 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<MedicalRecordDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByPatient(int patientId) =>
         Ok(await _service.GetByPatientIdAsync(patientId));
+
+    /// <summary>Doktora ait tüm muayene kayıtlarını listeler.</summary>
+    [HttpGet("doctor/{doctorId:int}")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MedicalRecordDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetByDoctor(int doctorId) =>
+        Ok(await _service.GetByDoctorIdAsync(doctorId));
 
     /// <summary>Bir randevuya ait muayene kaydını getirir.</summary>
     [HttpGet("appointment/{appointmentId:int}")]

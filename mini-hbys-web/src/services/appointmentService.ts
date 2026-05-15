@@ -19,6 +19,12 @@ export const appointmentService = {
     const { data } = await apiClient.get<ApiResponse<Appointment[]>>("/appointments");
     return unwrap(data);
   },
+  listByDoctor: async (doctorId: number): Promise<Appointment[]> => {
+    const { data } = await apiClient.get<ApiResponse<Appointment[]>>(
+      `/appointments/doctor/${doctorId}`
+    );
+    return unwrap(data);
+  },
   create: async (dto: CreateAppointmentDto): Promise<Appointment> => {
     const { data } = await apiClient.post<ApiResponse<Appointment>>("/appointments", dto);
     return unwrap(data);

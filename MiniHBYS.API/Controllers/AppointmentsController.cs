@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniHBYS.Core.DTOs;
 using MiniHBYS.Core.Interfaces;
@@ -8,6 +9,7 @@ namespace MiniHBYS.API.Controllers;
 [Route("api/appointments")]
 [Produces("application/json")]
 [Tags("Appointments")]
+[Authorize]
 public class AppointmentsController : ControllerBase
 {
     private readonly IAppointmentService _service;

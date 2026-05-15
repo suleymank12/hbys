@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniHBYS.Core.DTOs;
 using MiniHBYS.Core.Interfaces;
@@ -8,8 +9,11 @@ namespace MiniHBYS.API.Controllers;
 [Route("api/patients")]
 [Produces("application/json")]
 [Tags("Patients")]
+[Authorize]
 public class PatientsController : ControllerBase
 {
+    private const string WriteRoles = "Admin,Sekreter";
+
     private readonly IPatientService _service;
 
     public PatientsController(IPatientService service)
@@ -55,26 +59,9 @@ public class PatientsController : ControllerBase
     ///       "phone": "05321234567",
     ///       "email": "ayse@example.com"
     ///     }
-    ///
-    /// Örnek yanıt:
-    ///
-    ///     {
-    ///       "success": true,
-    ///       "message": "Hasta oluşturuldu.",
-    ///       "data": {
-    ///         "id": 12,
-    ///         "name": "Ayşe",
-    ///         "surname": "Yılmaz",
-    ///         "fullName": "Ayşe Yılmaz",
-    ///         "nationalId": "12345678901",
-    ///         "birthDate": "1990-05-14T00:00:00",
-    ///         "phone": "05321234567",
-    ///         "email": "ayse@example.com",
-    ///         "createdAt": "2026-04-15T08:30:00Z"
-    ///       }
-    ///     }
     /// </remarks>
     [HttpPost]
+    [Authorize(Roles = WriteRoles)]
     [ProducesResponseType(typeof(ApiResponse<PatientDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<PatientDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreatePatientDto dto)
@@ -86,19 +73,8 @@ public class PatientsController : ControllerBase
     }
 
     /// <summary>Hasta bilgilerini günceller.</summary>
-    /// <remarks>
-    /// Örnek istek:
-    ///
-    ///     PUT /api/patients/12
-    ///     {
-    ///       "name": "Ayşe",
-    ///       "surname": "Yılmaz",
-    ///       "birthDate": "1990-05-14",
-    ///       "phone": "05555551122",
-    ///       "email": "ayse.yeni@example.com"
-    ///     }
-    /// </remarks>
     [HttpPut("{id:int}")]
+    [Authorize(Roles = WriteRoles)]
     [ProducesResponseType(typeof(ApiResponse<PatientDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<PatientDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdatePatientDto dto)
@@ -109,6 +85,7 @@ public class PatientsController : ControllerBase
 
     /// <summary>Hasta kaydını siler (soft delete).</summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = WriteRoles)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)

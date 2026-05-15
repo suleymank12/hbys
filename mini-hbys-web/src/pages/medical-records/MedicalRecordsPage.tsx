@@ -6,6 +6,9 @@ import { Button } from "../../components/ui/Button";
 import { medicalRecordService } from "../../services/medicalRecordService";
 import { AppointmentStatus, type Appointment, type MedicalRecord } from "../../types";
 import { MedicalRecordModal } from "../appointments/MedicalRecordModal";
+import { useAuth } from "../../contexts/AuthContext";
+import { ExportButton } from "../../components/ui/ExportButton";
+import { exportService } from "../../services/exportService";
 
 const DIAGNOSIS_MAX = 60;
 const NOTES_MAX = 40;
@@ -27,6 +30,9 @@ const recordToAppointment = (r: MedicalRecord): Appointment => ({
 });
 
 export function MedicalRecordsPage() {
+  const { user, hasRole } = useAuth();
+  const isDoctor = hasRole("Doktor");
+
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -46,7 +52,11 @@ export function MedicalRecordsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      setRecords(await medicalRecordService.getAll());
+      const data =
+        isDoctor && user
+          ? await medicalRecordService.getByDoctor(user.id)
+          : await medicalRecordService.getAll();
+      setRecords(data);
     } catch {
       /* interceptor */
     } finally {
@@ -56,7 +66,8 @@ export function MedicalRecordsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDoctor, user?.id]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("tr-TR");
@@ -84,10 +95,18 @@ export function MedicalRecordsPage() {
                        transition-colors"
           />
         </div>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-medical-50
-                        border border-medical-100 text-medical-700 text-xs font-medium">
-          <FileText className="w-3.5 h-3.5" />
-          Toplam {filtered.length} kayıt
+        <div className="flex items-center gap-2 flex-wrap">
+          {isDoctor && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-medical-50 text-medical-700">
+              Sadece kendi muayene kayıtlarınız
+            </span>
+          )}
+          <ExportButton onExport={() => exportService.medicalRecords()} />
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-medical-50
+                          border border-medical-100 text-medical-700 text-xs font-medium">
+            <FileText className="w-3.5 h-3.5" />
+            Toplam {filtered.length} kayıt
+          </div>
         </div>
       </div>
 
@@ -121,6 +140,8 @@ export function MedicalRecordsPage() {
                     <Stethoscope className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     {search
                       ? "Aramayla eşleşen muayene kaydı bulunamadı."
+                      : isDoctor
+                      ? "Size ait muayene kaydı bulunmuyor."
                       : "Henüz muayene kaydı bulunmuyor."}
                   </td>
                 </tr>

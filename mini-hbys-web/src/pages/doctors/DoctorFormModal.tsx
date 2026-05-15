@@ -114,6 +114,7 @@ export function DoctorFormModal({ open, doctor, onClose, onSubmit }: Props) {
             label="Şifre"
             type="password"
             placeholder="En az 6 karakter"
+            autoComplete="new-password"
             error={errors.password?.message}
             {...register("password", {
               required: "Şifre zorunludur.",

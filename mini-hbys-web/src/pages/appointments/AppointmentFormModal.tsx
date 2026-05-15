@@ -30,6 +30,8 @@ interface Props {
   appointments: Appointment[];
   onClose: () => void;
   onSubmit: (dto: CreateAppointmentDto) => Promise<void>;
+  initialDate?: string;
+  initialTime?: string;
 }
 
 const TIME_SLOTS = (() => {
@@ -61,6 +63,8 @@ export function AppointmentFormModal({
   appointments,
   onClose,
   onSubmit,
+  initialDate,
+  initialTime,
 }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const {
@@ -80,10 +84,15 @@ export function AppointmentFormModal({
 
   useEffect(() => {
     if (open) {
-      reset({ patientId: null, doctorId: null, date: "", time: "" });
+      reset({
+        patientId: null,
+        doctorId: null,
+        date: initialDate ?? "",
+        time: initialTime ?? "",
+      });
       setPreview(null);
     }
-  }, [open, reset]);
+  }, [open, reset, initialDate, initialTime]);
 
   const date = watch("date");
   const time = watch("time");

@@ -7,7 +7,12 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "Bash(npm uninstall:*)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "PowerShell(Copy-Item *)",
+      "Bash(find /d/HBYSproje/MiniHBYS.* -type f -name \"*.cs\")",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(rmdir /s /q D:\\\\tmp\\\\hbysbuild)",
+      "Bash(rm -rf D:/tmp/hbysbuild)"
     ]
   }
 }
