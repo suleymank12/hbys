@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarCheck } from "lucide-react";
+import { AlertCircle, CalendarCheck } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { DatePicker } from "../../components/ui/DatePicker";
@@ -42,20 +42,33 @@ interface Props {
   initialTime?: string;
 }
 
-const TIME_SLOTS = (() => {
-  const slots: string[] = [];
-  for (let h = 8; h <= 18; h++) {
-    for (const m of [0, 30]) {
-      slots.push(
-        `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
-      );
-    }
-  }
-  return slots;
-})();
+const SLOT_MINUTES = 30;
 
 const toDateKey = (d: Date) => format(d, "yyyy-MM-dd");
 const toTimeKey = (d: Date) => format(d, "HH:mm");
+
+const isoDayOfWeek = (d: Date): number => {
+  const js = d.getDay(); // 0=Sunday..6=Saturday
+  return js === 0 ? 7 : js;
+};
+
+const parseHm = (hm: string): number => {
+  const [h, m] = hm.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const formatHm = (mins: number): string =>
+  `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+
+const generateSlots = (startHm: string, endHm: string): string[] => {
+  const start = parseHm(startHm);
+  const end = parseHm(endHm);
+  const slots: string[] = [];
+  for (let t = start; t + SLOT_MINUTES <= end; t += SLOT_MINUTES) {
+    slots.push(formatHm(t));
+  }
+  return slots;
+};
 
 function toIsoUtc(date: string, time: string): string {
   const [h, m] = time.split(":").map(Number);
@@ -108,6 +121,30 @@ export function AppointmentFormModal({
   const time = watch("time");
   const doctorId = watch("doctorId");
 
+  const selectedDoctor = useMemo(
+    () => doctors.find((d) => d.id === doctorId) ?? null,
+    [doctors, doctorId]
+  );
+
+  const scheduleByDay = useMemo(() => {
+    const map = new Map<number, { start: string; end: string }>();
+    selectedDoctor?.schedules.forEach((s) =>
+      map.set(s.dayOfWeek, { start: s.startTime, end: s.endTime })
+    );
+    return map;
+  }, [selectedDoctor]);
+
+  const daySchedule = useMemo(() => {
+    if (!date) return null;
+    const d = new Date(date);
+    return scheduleByDay.get(isoDayOfWeek(d)) ?? null;
+  }, [date, scheduleByDay]);
+
+  const daySlots = useMemo(
+    () => (daySchedule ? generateSlots(daySchedule.start, daySchedule.end) : []),
+    [daySchedule]
+  );
+
   useEffect(() => {
     if (date && time) {
       const dt = new Date(toIsoUtc(date, time));
@@ -138,19 +175,19 @@ export function AppointmentFormModal({
     return map;
   }, [doctorAppointments]);
 
-  const fullyBookedDates = useMemo(() => {
-    const set = new Set<string>();
-    takenByDate.forEach((slots, key) => {
-      if (slots.size >= TIME_SLOTS.length) set.add(key);
-    });
-    return set;
-  }, [takenByDate]);
-
-  const isDateFullyBooked = (d: Date) => fullyBookedDates.has(toDateKey(d));
+  const isDateDisabled = (d: Date): boolean => {
+    const day = isoDayOfWeek(d);
+    const sch = scheduleByDay.get(day);
+    if (!sch) return true;
+    const slots = generateSlots(sch.start, sch.end);
+    if (slots.length === 0) return true;
+    const taken = takenByDate.get(toDateKey(d)) ?? new Set<string>();
+    return slots.every((t) => taken.has(t));
+  };
 
   const timeOptions = useMemo(() => {
     const taken = date ? takenByDate.get(date) ?? new Set<string>() : new Set<string>();
-    return TIME_SLOTS.map((t) => {
+    return daySlots.map((t) => {
       const isTaken = taken.has(t);
       return {
         value: t,
@@ -159,15 +196,17 @@ export function AppointmentFormModal({
         hint: isTaken ? "dolu" : undefined,
       };
     });
-  }, [date, takenByDate]);
+  }, [date, daySlots, takenByDate]);
+
+  const showOffDayWarning = !!doctorId && !!date && !daySchedule;
 
   useEffect(() => {
     if (!time) return;
     const opt = timeOptions.find((o) => o.value === time);
-    if (opt?.disabled) {
+    if (!opt || opt.disabled) {
       reset((v) => ({ ...v, time: "" }));
     }
-  }, [doctorId, date]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [doctorId, date, daySchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patientOptions = useMemo(
     () =>
@@ -264,7 +303,7 @@ export function AppointmentFormModal({
                 value={field.value}
                 onChange={field.onChange}
                 minDate={tomorrow}
-                isDateDisabled={doctorId != null ? isDateFullyBooked : undefined}
+                isDateDisabled={doctorId != null ? isDateDisabled : undefined}
                 error={errors.date?.message}
               />
             )}
@@ -285,14 +324,25 @@ export function AppointmentFormModal({
                     ? "Önce doktor seçiniz"
                     : !date
                     ? "Önce tarih seçiniz"
+                    : !daySchedule
+                    ? "Mesai dışı"
                     : "Saat seçiniz"
                 }
-                disabled={!doctorId || !date}
+                disabled={!doctorId || !date || !daySchedule}
                 error={errors.time?.message}
               />
             )}
           />
         </div>
+
+        {showOffDayWarning && (
+          <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              Bu doktor seçilen günde çalışmıyor. Lütfen başka bir gün seçin.
+            </span>
+          </div>
+        )}
 
         <Controller
           control={control}

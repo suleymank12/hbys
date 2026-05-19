@@ -7,6 +7,7 @@ import {
   Activity,
   CalendarClock,
   ClipboardList,
+  Download,
   Droplet,
   FileSignature,
   FileText,
@@ -100,6 +101,24 @@ export function MedicalRecordModal({
 
   const [existing, setExisting] = useState<MedicalRecord | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+
+  const downloadEpikriz = async () => {
+    if (!existing || !appointment) return;
+    setPdfDownloading(true);
+    try {
+      const date = new Date(appointment.dateTime);
+      const stamp = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+      await medicalRecordService.downloadEpikrizPdf(
+        existing.id,
+        `Epikriz_${existing.id}_${stamp}.pdf`
+      );
+    } catch {
+      /* interceptor */
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
 
   const {
     register,
@@ -214,6 +233,20 @@ export function MedicalRecordModal({
             sub={format(apptDate, "HH:mm")}
           />
         </div>
+        {existing && (
+          <div className="mt-3 pt-3 border-t border-slate-200 flex justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<Download className="w-3.5 h-3.5" />}
+              onClick={downloadEpikriz}
+              loading={pdfDownloading}
+            >
+              PDF İndir
+            </Button>
+          </div>
+        )}
       </div>
 
       {loading ? (

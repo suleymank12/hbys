@@ -4,6 +4,7 @@ import type {
   CreateDoctorDto,
   Doctor,
   UpdateDoctorDto,
+  UpdateDoctorScheduleDto,
 } from "../types";
 
 const unwrap = <T,>(res: ApiResponse<T>): T => {
@@ -34,5 +35,15 @@ export const doctorService = {
   },
   remove: async (id: number): Promise<void> => {
     await apiClient.delete<ApiResponse<boolean>>(`/doctors/${id}`);
+  },
+  updateSchedule: async (
+    id: number,
+    dto: UpdateDoctorScheduleDto
+  ): Promise<Doctor> => {
+    const { data } = await apiClient.put<ApiResponse<Doctor>>(
+      `/doctors/${id}/schedule`,
+      dto
+    );
+    return unwrap(data);
   },
 };

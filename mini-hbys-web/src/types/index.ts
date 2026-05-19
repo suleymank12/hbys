@@ -165,6 +165,23 @@ export interface UpdatePatientDto {
   chronicDiseases?: string | null;
 }
 
+export interface DoctorSchedule {
+  dayOfWeek: number;
+  dayName: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface UpdateScheduleItem {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface UpdateDoctorScheduleDto {
+  schedules: UpdateScheduleItem[];
+}
+
 export interface Doctor {
   id: number;
   title?: string | null;
@@ -173,6 +190,7 @@ export interface Doctor {
   email: string;
   displayName: string;
   createdAt: string;
+  schedules: DoctorSchedule[];
 }
 
 export interface CreateDoctorDto {
@@ -346,4 +364,36 @@ export interface DashboardStats {
   completedAppointments: number;
   cancelledAppointments: number;
   branchStats: BranchStat[];
+}
+
+export interface TodayAppointment {
+  id: number;
+  dateTime: string;
+  patientFullName: string;
+  doctorName: string;
+  doctorBranch: string;
+  status: AppointmentStatus;
+  statusText: string;
+  type: AppointmentType;
+  typeText: string;
+}
+
+export interface RecentMedicalRecord {
+  id: number;
+  appointmentId: number;
+  appointmentDate: string;
+  patientFullName: string;
+  doctorName: string;
+  doctorBranch: string;
+  diagnosis: string;
+  diagnosisCode?: string | null;
+}
+
+export interface DoctorStat {
+  doctorId: number;
+  doctorName: string;
+  branch: string;
+  totalAppointments: number;
+  completedAppointments: number;
+  pendingAppointments: number;
 }

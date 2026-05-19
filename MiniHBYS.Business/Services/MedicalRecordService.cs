@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using MiniHBYS.Business.Pdf;
 using MiniHBYS.Core.DTOs;
 using MiniHBYS.Core.Entities;
 using MiniHBYS.Core.Enums;
@@ -168,6 +169,107 @@ public class MedicalRecordService : IMedicalRecordService
         var updated = await BaseQuery().FirstAsync(m => m.Id == entity.Id);
         return ApiResponse<MedicalRecordDto>.Ok(_mapper.Map<MedicalRecordDto>(updated), "Muayene kaydı güncellendi.");
     }
+
+    public async Task<ApiResponse<EpikrizFileDto>> GenerateEpikrizPdfAsync(int id)
+    {
+        var record = await _context.MedicalRecords
+            .AsNoTracking()
+            .Include(m => m.Appointment).ThenInclude(a => a.Patient)
+            .Include(m => m.Appointment).ThenInclude(a => a.Doctor)
+            .Include(m => m.VitalSigns)
+            .Include(m => m.Prescription!).ThenInclude(p => p.Items)
+            .FirstOrDefaultAsync(m => m.Id == id);
+
+        if (record is null)
+            return ApiResponse<EpikrizFileDto>.Fail("Muayene kaydı bulunamadı.");
+
+        var patient = record.Appointment.Patient;
+        var doctor = record.Appointment.Doctor;
+
+        var data = new EpikrizData
+        {
+            HastaneAdi = "Mini HBYS",
+            PatientFullName = $"{patient.Name} {patient.Surname}",
+            ProtocolNumber = patient.ProtocolNumber,
+            NationalId = patient.NationalId,
+            BirthDate = patient.BirthDate,
+            Gender = GetGenderText(patient.Gender),
+            BloodType = GetBloodTypeText(patient.BloodType),
+            DoctorName = BuildDoctorName(doctor.Title, doctor.Name),
+            DoctorBranch = doctor.Branch,
+            AppointmentDate = record.Appointment.DateTime,
+            ChiefComplaint = record.ChiefComplaint,
+            History = record.History,
+            Examination = record.Examination,
+            Diagnosis = record.Diagnosis,
+            DiagnosisCode = record.DiagnosisCode,
+            TreatmentPlan = record.TreatmentPlan,
+            Notes = record.Notes,
+            VitalSigns = record.VitalSigns is null ? null : new EpikrizVitalSigns
+            {
+                BloodPressureSystolic = record.VitalSigns.BloodPressureSystolic,
+                BloodPressureDiastolic = record.VitalSigns.BloodPressureDiastolic,
+                Pulse = record.VitalSigns.Pulse,
+                Temperature = record.VitalSigns.Temperature,
+                RespiratoryRate = record.VitalSigns.RespiratoryRate,
+                OxygenSaturation = record.VitalSigns.OxygenSaturation,
+                Height = record.VitalSigns.Height,
+                Weight = record.VitalSigns.Weight
+            },
+            PrescriptionNumber = record.Prescription?.PrescriptionNumber,
+            PrescriptionItems = record.Prescription?.Items
+                .Where(i => i.IsActive)
+                .Select(i => new EpikrizPrescriptionItem
+                {
+                    MedicationName = i.MedicationName,
+                    Dosage = i.Dosage,
+                    Frequency = i.Frequency,
+                    Duration = i.Duration,
+                    Instructions = i.Instructions
+                }).ToList() ?? new List<EpikrizPrescriptionItem>()
+        };
+
+        var bytes = EpikrizPdfBuilder.Generate(data);
+
+        var fileName =
+            $"Epikriz_{Sanitize(patient.ProtocolNumber)}_{record.Appointment.DateTime:yyyyMMdd}.pdf";
+
+        await _audit.LogAsync("MedicalRecord", record.Id, "EpikrizPdf",
+            $"Epikriz PDF oluşturuldu. Protokol: {patient.ProtocolNumber}");
+
+        return ApiResponse<EpikrizFileDto>.Ok(new EpikrizFileDto
+        {
+            Content = bytes,
+            FileName = fileName
+        });
+    }
+
+    private static string Sanitize(string s) =>
+        new string(s.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
+
+    private static string BuildDoctorName(string? title, string name) =>
+        string.IsNullOrWhiteSpace(title) ? name : $"{title.Trim()} {name}";
+
+    private static string GetGenderText(Gender gender) => gender switch
+    {
+        Gender.Erkek => "Erkek",
+        Gender.Kadın => "Kadın",
+        Gender.Belirtilmemiş => "Belirtilmemiş",
+        _ => gender.ToString()
+    };
+
+    private static string? GetBloodTypeText(BloodType? bt) => bt switch
+    {
+        BloodType.ARhPositive => "A Rh+",
+        BloodType.ARhNegative => "A Rh-",
+        BloodType.BRhPositive => "B Rh+",
+        BloodType.BRhNegative => "B Rh-",
+        BloodType.ABRhPositive => "AB Rh+",
+        BloodType.ABRhNegative => "AB Rh-",
+        BloodType.ORhPositive => "0 Rh+",
+        BloodType.ORhNegative => "0 Rh-",
+        _ => null
+    };
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {

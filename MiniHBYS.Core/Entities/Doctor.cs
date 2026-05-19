@@ -10,4 +10,5 @@ public class Doctor : BaseEntity
     public User User { get; set; } = null!;
 
     public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    public ICollection<DoctorSchedule> Schedules { get; set; } = new List<DoctorSchedule>();
 }

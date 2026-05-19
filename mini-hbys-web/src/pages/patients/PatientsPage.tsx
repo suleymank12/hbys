@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardList, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Button } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
@@ -188,7 +189,12 @@ export function PatientsPage() {
                       {p.protocolNumber}
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="font-medium text-slate-900">{p.fullName}</div>
+                      <Link
+                        to={`/patients/${p.id}`}
+                        className="font-medium text-slate-900 hover:text-medical-700 transition-colors"
+                      >
+                        {p.fullName}
+                      </Link>
                     </td>
                     <td className="px-5 py-3.5 text-slate-600 tabular-nums">
                       {p.nationalId}

@@ -12,4 +12,5 @@ public interface IMedicalRecordService
     Task<ApiResponse<MedicalRecordDto>> CreateAsync(CreateMedicalRecordDto dto, int doctorId);
     Task<ApiResponse<MedicalRecordDto>> UpdateAsync(int id, UpdateMedicalRecordDto dto, int doctorId);
     Task<ApiResponse<bool>> DeleteAsync(int id);
+    Task<ApiResponse<EpikrizFileDto>> GenerateEpikrizPdfAsync(int id);
 }

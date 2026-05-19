@@ -10,4 +10,5 @@ public interface IDoctorService
     Task<ApiResponse<DoctorDto>> CreateAsync(CreateDoctorDto dto);
     Task<ApiResponse<DoctorDto>> UpdateAsync(int id, UpdateDoctorDto dto);
     Task<ApiResponse<bool>> DeleteAsync(int id);
+    Task<ApiResponse<DoctorDto>> UpdateScheduleAsync(int id, UpdateDoctorScheduleDto dto);
 }

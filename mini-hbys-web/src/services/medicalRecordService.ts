@@ -19,6 +19,34 @@ export interface MedicalRecordListParams {
   pageSize?: number;
 }
 
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const extractFileName = (
+  contentDisposition: string | undefined,
+  fallback: string
+): string => {
+  if (!contentDisposition) return fallback;
+  const utf8Match = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(contentDisposition);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].replace(/"/g, ""));
+    } catch {
+      /* ignore */
+    }
+  }
+  const match = /filename\s*=\s*"?([^";]+)"?/i.exec(contentDisposition);
+  return match?.[1]?.trim() || fallback;
+};
+
 export const medicalRecordService = {
   getAll: async (params: MedicalRecordListParams = {}): Promise<PagedResult<MedicalRecord>> => {
     const { page = 1, pageSize = 20 } = params;
@@ -69,5 +97,15 @@ export const medicalRecordService = {
       dto
     );
     return unwrap(data);
+  },
+  downloadEpikrizPdf: async (id: number, fallbackName?: string): Promise<void> => {
+    const response = await apiClient.get<Blob>(`/medical-records/${id}/epikriz`, {
+      responseType: "blob",
+    });
+    const fileName = extractFileName(
+      response.headers["content-disposition"] as string | undefined,
+      fallbackName ?? `Epikriz_${id}.pdf`
+    );
+    downloadBlob(response.data, fileName);
   },
 };

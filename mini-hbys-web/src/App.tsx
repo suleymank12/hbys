@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { Layout } from "./components/layout/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { PatientsPage } from "./pages/patients/PatientsPage";
+import { PatientFilePage } from "./pages/patients/PatientFilePage";
 import { DoctorsPage } from "./pages/doctors/DoctorsPage";
 import { AppointmentsPage } from "./pages/appointments/AppointmentsPage";
 import { MedicalRecordsPage } from "./pages/medical-records/MedicalRecordsPage";
@@ -84,6 +85,7 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="patients" element={<PatientsPage />} />
+            <Route path="patients/:id" element={<PatientFilePage />} />
             <Route
               path="doctors"
               element={

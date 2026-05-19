@@ -23,6 +23,7 @@ public class DoctorService : IDoctorService
     {
         var list = await _context.Doctors.AsNoTracking()
             .Include(d => d.User)
+            .Include(d => d.Schedules)
             .OrderBy(d => d.Branch).ThenBy(d => d.Name)
             .ToListAsync();
         return ApiResponse<IEnumerable<DoctorDto>>.Ok(_mapper.Map<IEnumerable<DoctorDto>>(list));
@@ -32,6 +33,7 @@ public class DoctorService : IDoctorService
     {
         var entity = await _context.Doctors.AsNoTracking()
             .Include(d => d.User)
+            .Include(d => d.Schedules)
             .FirstOrDefaultAsync(d => d.Id == id);
         return entity is null
             ? ApiResponse<DoctorDto>.Fail("Doktor bulunamadı.")
@@ -42,6 +44,7 @@ public class DoctorService : IDoctorService
     {
         var list = await _context.Doctors.AsNoTracking()
             .Include(d => d.User)
+            .Include(d => d.Schedules)
             .Where(d => d.Branch == branch)
             .OrderBy(d => d.Name)
             .ToListAsync();
@@ -104,6 +107,73 @@ public class DoctorService : IDoctorService
         await _context.SaveChangesAsync();
         return ApiResponse<DoctorDto>.Ok(_mapper.Map<DoctorDto>(entity), "Doktor bilgileri güncellendi.");
     }
+
+    public async Task<ApiResponse<DoctorDto>> UpdateScheduleAsync(int id, UpdateDoctorScheduleDto dto)
+    {
+        var entity = await _context.Doctors
+            .Include(d => d.User)
+            .Include(d => d.Schedules)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (entity is null) return ApiResponse<DoctorDto>.Fail("Doktor bulunamadı.");
+
+        var validated = new List<(int Day, TimeSpan Start, TimeSpan End)>();
+        var seenDays = new HashSet<int>();
+
+        foreach (var item in dto.Schedules)
+        {
+            if (item.DayOfWeek < 1 || item.DayOfWeek > 7)
+                return ApiResponse<DoctorDto>.Fail($"Geçersiz gün: {item.DayOfWeek}.");
+
+            if (!seenDays.Add(item.DayOfWeek))
+                return ApiResponse<DoctorDto>.Fail("Aynı gün için birden fazla mesai kaydı verilemez.");
+
+            if (!TimeSpan.TryParse(item.StartTime, out var start) ||
+                !TimeSpan.TryParse(item.EndTime, out var end))
+                return ApiResponse<DoctorDto>.Fail("Mesai saatleri HH:mm biçiminde olmalıdır.");
+
+            if (start >= end)
+                return ApiResponse<DoctorDto>.Fail($"{GetDayName(item.DayOfWeek)} için başlangıç saati bitiş saatinden önce olmalıdır.");
+
+            validated.Add((item.DayOfWeek, start, end));
+        }
+
+        _context.DoctorSchedules.RemoveRange(entity.Schedules);
+
+        foreach (var v in validated)
+        {
+            _context.DoctorSchedules.Add(new DoctorSchedule
+            {
+                DoctorId = entity.Id,
+                DayOfWeek = v.Day,
+                StartTime = v.Start,
+                EndTime = v.End,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            });
+        }
+
+        entity.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var fresh = await _context.Doctors.AsNoTracking()
+            .Include(d => d.User)
+            .Include(d => d.Schedules)
+            .FirstAsync(d => d.Id == id);
+
+        return ApiResponse<DoctorDto>.Ok(_mapper.Map<DoctorDto>(fresh), "Mesai çizelgesi güncellendi.");
+    }
+
+    private static string GetDayName(int day) => day switch
+    {
+        1 => "Pazartesi",
+        2 => "Salı",
+        3 => "Çarşamba",
+        4 => "Perşembe",
+        5 => "Cuma",
+        6 => "Cumartesi",
+        7 => "Pazar",
+        _ => day.ToString()
+    };
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {

@@ -84,6 +84,19 @@ public class MedicalRecordsController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    /// <summary>Muayene kaydından PDF epikriz raporu üretir.</summary>
+    [HttpGet("{id:int}/epikriz")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetEpikrizPdf(int id)
+    {
+        var result = await _service.GenerateEpikrizPdfAsync(id);
+        if (!result.Success || result.Data is null)
+            return NotFound(result);
+
+        return File(result.Data.Content, "application/pdf", result.Data.FileName);
+    }
+
     private bool TryGetDoctorId(out int doctorId)
     {
         var claim = User.FindFirstValue("doctorId");

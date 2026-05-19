@@ -79,6 +79,18 @@ public class AppointmentService : IAppointmentService
         if (!await _context.Doctors.AnyAsync(d => d.Id == dto.DoctorId))
             return ApiResponse<AppointmentDto>.Fail("Doktor bulunamadı.");
 
+        // ISO day: Monday=1..Sunday=7 (DayOfWeek enum: Sunday=0..Saturday=6)
+        var isoDay = (int)when.DayOfWeek == 0 ? 7 : (int)when.DayOfWeek;
+        var timeOfDay = when.TimeOfDay;
+
+        var schedule = await _context.DoctorSchedules
+            .Where(s => s.DoctorId == dto.DoctorId && s.DayOfWeek == isoDay)
+            .Select(s => new { s.StartTime, s.EndTime })
+            .FirstOrDefaultAsync();
+
+        if (schedule is null || timeOfDay < schedule.StartTime || timeOfDay >= schedule.EndTime)
+            return ApiResponse<AppointmentDto>.Fail("Seçilen doktor bu gün ve saatte çalışmıyor.");
+
         var slotStart = when - SlotDuration + TimeSpan.FromTicks(1);
         var slotEnd = when + SlotDuration - TimeSpan.FromTicks(1);
 

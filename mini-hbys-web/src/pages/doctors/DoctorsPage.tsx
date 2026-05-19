@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search, Stethoscope, Trash2 } from "lucide-react";
+import { CalendarDays, Pencil, Plus, Search, Stethoscope, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
@@ -9,6 +9,63 @@ import { doctorService } from "../../services/doctorService";
 import type { CreateDoctorDto, Doctor, UpdateDoctorDto } from "../../types";
 import { DoctorFormModal } from "./DoctorFormModal";
 import { useAuth } from "../../contexts/AuthContext";
+
+const DAY_INITIALS = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
+
+function ScheduleSummary({
+  schedules,
+}: {
+  schedules: Doctor["schedules"];
+}) {
+  if (!schedules || schedules.length === 0) {
+    return (
+      <span className="text-xs text-slate-400">Mesai tanımlanmamış</span>
+    );
+  }
+  const byDay = new Map(schedules.map((s) => [s.dayOfWeek, s]));
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="inline-flex gap-0.5">
+        {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+          const active = byDay.has(d);
+          return (
+            <span
+              key={d}
+              title={
+                active
+                  ? `${DAY_INITIALS[d - 1]}: ${byDay.get(d)!.startTime}-${byDay.get(d)!.endTime}`
+                  : `${DAY_INITIALS[d - 1]}: çalışmıyor`
+              }
+              className={`inline-flex items-center justify-center w-6 h-5 rounded text-[10px] font-medium ${
+                active
+                  ? "bg-medical-100 text-medical-800"
+                  : "bg-slate-100 text-slate-400"
+              }`}
+            >
+              {DAY_INITIALS[d - 1]}
+            </span>
+          );
+        })}
+      </div>
+      <ScheduleHours schedules={schedules} />
+    </div>
+  );
+}
+
+function ScheduleHours({ schedules }: { schedules: Doctor["schedules"] }) {
+  // Hours summary: if all working days have identical range, show "08:00-17:00"; otherwise "Değişken".
+  const sorted = [...schedules].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  if (sorted.length === 0) return null;
+  const sample = `${sorted[0].startTime}-${sorted[0].endTime}`;
+  const allSame = sorted.every(
+    (s) => `${s.startTime}-${s.endTime}` === sample
+  );
+  return (
+    <span className="text-[11px] text-slate-500 tabular-nums">
+      {allSame ? sample : "Değişken"}
+    </span>
+  );
+}
 
 const BRANCH_COLORS: Record<string, string> = {
   Dahiliye: "bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200/60",
@@ -141,6 +198,12 @@ export function DoctorsPage() {
                 <th className="text-left px-5 py-3 font-medium">Ad</th>
                 <th className="text-center px-5 py-3 font-medium">Branş</th>
                 <th className="text-left px-5 py-3 font-medium">E-posta</th>
+                <th className="text-left px-5 py-3 font-medium">
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                    Mesai
+                  </span>
+                </th>
                 {canManage && (
                   <th className="text-right px-5 py-3 font-medium">İşlemler</th>
                 )}
@@ -150,7 +213,7 @@ export function DoctorsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: canManage ? 4 : 3 }).map((__, j) => (
+                    {Array.from({ length: canManage ? 5 : 4 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-3 w-full max-w-[160px] bg-slate-100 rounded animate-pulse" />
                       </td>
@@ -159,7 +222,7 @@ export function DoctorsPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canManage ? 4 : 3} className="px-5 py-16 text-center text-slate-500">
+                  <td colSpan={canManage ? 5 : 4} className="px-5 py-16 text-center text-slate-500">
                     <Stethoscope className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     {search || branchFilter
                       ? "Arama kriterleriyle eşleşen doktor bulunamadı."
@@ -182,6 +245,9 @@ export function DoctorsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">{d.email}</td>
+                    <td className="px-5 py-3.5">
+                      <ScheduleSummary schedules={d.schedules} />
+                    </td>
                     {canManage && (
                       <td className="px-5 py-3 text-right">
                         <div className="inline-flex gap-1">
@@ -226,6 +292,7 @@ export function DoctorsPage() {
             doctor={editing}
             onClose={() => setModalOpen(false)}
             onSubmit={handleSubmit}
+            onScheduleUpdated={load}
           />
 
           <ConfirmDialog

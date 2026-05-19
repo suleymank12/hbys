@@ -31,6 +31,10 @@ export const patientService = {
     );
     return unwrap(data);
   },
+  getById: async (id: number): Promise<Patient> => {
+    const { data } = await apiClient.get<ApiResponse<Patient>>(`/patients/${id}`);
+    return unwrap(data);
+  },
   create: async (dto: CreatePatientDto): Promise<Patient> => {
     const { data } = await apiClient.post<ApiResponse<Patient>>("/patients", dto);
     return unwrap(data);

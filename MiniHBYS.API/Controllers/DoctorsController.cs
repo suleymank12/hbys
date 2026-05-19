@@ -95,4 +95,35 @@ public class DoctorsController : ControllerBase
         var result = await _service.DeleteAsync(id);
         return result.Success ? Ok(result) : NotFound(result);
     }
+
+    /// <summary>Doktorun haftalık mesai çizelgesini günceller (mevcut çizelgeyi tamamen değiştirir).</summary>
+    /// <remarks>
+    /// Örnek istek:
+    ///
+    ///     PUT /api/doctors/3/schedule
+    ///     {
+    ///       "schedules": [
+    ///         { "dayOfWeek": 1, "startTime": "08:00", "endTime": "17:00" },
+    ///         { "dayOfWeek": 2, "startTime": "08:00", "endTime": "17:00" }
+    ///       ]
+    ///     }
+    ///
+    /// `dayOfWeek`: 1=Pazartesi, ... 7=Pazar. Verilmeyen günler mesai dışı sayılır.
+    /// </remarks>
+    [HttpPut("{id:int}/schedule")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateSchedule(int id, [FromBody] UpdateDoctorScheduleDto dto)
+    {
+        var result = await _service.UpdateScheduleAsync(id, dto);
+        if (!result.Success)
+        {
+            return result.Message?.Contains("bulunamadı") == true
+                ? NotFound(result)
+                : BadRequest(result);
+        }
+        return Ok(result);
+    }
 }

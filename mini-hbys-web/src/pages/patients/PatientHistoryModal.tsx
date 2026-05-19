@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { differenceInYears, format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { Link } from "react-router-dom";
 import {
   Activity,
   AlertTriangle,
   ClipboardList,
   Droplet,
+  ExternalLink,
   FileSignature,
   FileText,
   HeartPulse,
@@ -54,7 +56,19 @@ export function PatientHistoryModal({ open, patient, onClose }: Props) {
       size="lg"
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto -mx-6 px-6 pb-1">
-        {patient && <DemographicsCard patient={patient} />}
+        {patient && (
+          <>
+            <DemographicsCard patient={patient} />
+            <Link
+              to={`/patients/${patient.id}`}
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-medical-700 hover:text-medical-800 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Hasta Dosyası
+            </Link>
+          </>
+        )}
 
         {loading ? (
           <div className="space-y-3">

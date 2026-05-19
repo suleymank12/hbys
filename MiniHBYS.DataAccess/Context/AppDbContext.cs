@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
     public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,6 +66,17 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             b.HasIndex(d => d.UserId).IsUnique();
+            b.HasQueryFilter(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<DoctorSchedule>(b =>
+        {
+            b.HasOne(s => s.Doctor)
+                .WithMany(d => d.Schedules)
+                .HasForeignKey(s => s.DoctorId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(s => new { s.DoctorId, s.DayOfWeek }).IsUnique();
             b.HasQueryFilter(e => e.IsActive);
         });
 

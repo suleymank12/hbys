@@ -5,6 +5,7 @@ import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { FormField } from "./ui/FormField";
 import { authService } from "../services/authService";
+import { useAuth } from "../contexts/AuthContext";
 
 interface FormValues {
   currentPassword: string;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ChangePasswordModal({ open, onClose }: Props) {
+  const { user } = useAuth();
   const {
     register,
     handleSubmit,
@@ -62,6 +64,17 @@ export function ChangePasswordModal({ open, onClose }: Props) {
       size="sm"
     >
       <form onSubmit={onSubmit} className="space-y-4">
+        <input
+          type="text"
+          name="username"
+          autoComplete="username"
+          value={user?.email ?? ""}
+          readOnly
+          tabIndex={-1}
+          aria-hidden="true"
+          className="hidden"
+        />
+
         <FormField
           label="Mevcut Şifre"
           type="password"

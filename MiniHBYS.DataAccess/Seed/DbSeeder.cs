@@ -13,6 +13,7 @@ public static class DbSeeder
 
         await SeedSystemUsersAsync(context);
         await SeedDoctorsAsync(context);
+        await SeedDoctorSchedulesAsync(context);
         await SeedIcd10CodesAsync(context);
 
         if (await context.Patients.AnyAsync())
@@ -164,6 +165,79 @@ public static class DbSeeder
                 IsActive = true
             });
         }
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedDoctorSchedulesAsync(AppDbContext context)
+    {
+        // Bir doktorun günlük plan haritası: (gün => başlangıç-bitiş)
+        // Hafta içi 08-17 default; bazı doktorlar için farklı düzen.
+        var overrides = new Dictionary<string, Dictionary<int, (TimeSpan Start, TimeSpan End)>>
+        {
+            // Cumartesi de çalışan kardiyolog
+            ["mehmet.kaya@minihbys.com"] = new()
+            {
+                [1] = (new TimeSpan(9, 0, 0),  new TimeSpan(18, 0, 0)),
+                [2] = (new TimeSpan(9, 0, 0),  new TimeSpan(18, 0, 0)),
+                [3] = (new TimeSpan(9, 0, 0),  new TimeSpan(18, 0, 0)),
+                [4] = (new TimeSpan(9, 0, 0),  new TimeSpan(18, 0, 0)),
+                [5] = (new TimeSpan(9, 0, 0),  new TimeSpan(18, 0, 0)),
+                [6] = (new TimeSpan(9, 0, 0),  new TimeSpan(13, 0, 0)),
+            },
+            // Yarım gün çalışan göz doktoru (öğleden sonra)
+            ["emine.koc@minihbys.com"] = new()
+            {
+                [1] = (new TimeSpan(13, 0, 0), new TimeSpan(18, 0, 0)),
+                [2] = (new TimeSpan(13, 0, 0), new TimeSpan(18, 0, 0)),
+                [3] = (new TimeSpan(13, 0, 0), new TimeSpan(18, 0, 0)),
+                [4] = (new TimeSpan(13, 0, 0), new TimeSpan(18, 0, 0)),
+                [5] = (new TimeSpan(13, 0, 0), new TimeSpan(18, 0, 0)),
+            },
+            // Sadece Pzt-Çar-Cum çalışan ortopedist
+            ["mustafa.celik@minihbys.com"] = new()
+            {
+                [1] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                [3] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                [5] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+            },
+        };
+
+        var doctors = await context.Doctors
+            .Include(d => d.User)
+            .Include(d => d.Schedules)
+            .ToListAsync();
+
+        var defaultSchedule = new Dictionary<int, (TimeSpan Start, TimeSpan End)>
+        {
+            [1] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+            [2] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+            [3] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+            [4] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+            [5] = (new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+        };
+
+        foreach (var doctor in doctors)
+        {
+            if (doctor.Schedules.Any()) continue;
+
+            var plan = overrides.TryGetValue(doctor.User.Email, out var custom)
+                ? custom
+                : defaultSchedule;
+
+            foreach (var (day, range) in plan)
+            {
+                await context.DoctorSchedules.AddAsync(new DoctorSchedule
+                {
+                    DoctorId = doctor.Id,
+                    DayOfWeek = day,
+                    StartTime = range.Start,
+                    EndTime = range.End,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                });
+            }
+        }
+
         await context.SaveChangesAsync();
     }
 

@@ -24,7 +24,18 @@ public class MappingProfile : Profile
             .ForMember(d => d.Email,
                 o => o.MapFrom(s => s.User != null ? s.User.Email : string.Empty))
             .ForMember(d => d.DisplayName,
-                o => o.MapFrom(s => BuildDoctorDisplayName(s.Title, s.Name)));
+                o => o.MapFrom(s => BuildDoctorDisplayName(s.Title, s.Name)))
+            .ForMember(d => d.Schedules,
+                o => o.MapFrom(s => s.Schedules.OrderBy(x => x.DayOfWeek)));
+
+        CreateMap<DoctorSchedule, DoctorScheduleDto>()
+            .ForMember(d => d.DayName,
+                o => o.MapFrom(s => GetDayName(s.DayOfWeek)))
+            .ForMember(d => d.StartTime,
+                o => o.MapFrom(s => FormatTime(s.StartTime)))
+            .ForMember(d => d.EndTime,
+                o => o.MapFrom(s => FormatTime(s.EndTime)));
+
         CreateMap<CreateDoctorDto, Doctor>()
             .ForMember(d => d.UserId, o => o.Ignore())
             .ForMember(d => d.User, o => o.Ignore());
@@ -92,6 +103,20 @@ public class MappingProfile : Profile
 
     private static string BuildDoctorDisplayName(string? title, string name) =>
         string.IsNullOrWhiteSpace(title) ? name : $"{title.Trim()} {name}";
+
+    private static string GetDayName(int day) => day switch
+    {
+        1 => "Pazartesi",
+        2 => "Salı",
+        3 => "Çarşamba",
+        4 => "Perşembe",
+        5 => "Cuma",
+        6 => "Cumartesi",
+        7 => "Pazar",
+        _ => day.ToString()
+    };
+
+    private static string FormatTime(TimeSpan t) => $"{t.Hours:D2}:{t.Minutes:D2}";
 
     private static string GetStatusText(AppointmentStatus status) => status switch
     {
