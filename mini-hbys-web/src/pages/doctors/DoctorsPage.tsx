@@ -8,6 +8,7 @@ import { BRANCH_FILTER_OPTIONS } from "../../constants/branches";
 import { doctorService } from "../../services/doctorService";
 import type { CreateDoctorDto, Doctor, UpdateDoctorDto } from "../../types";
 import { DoctorFormModal } from "./DoctorFormModal";
+import { useAuth } from "../../contexts/AuthContext";
 
 const BRANCH_COLORS: Record<string, string> = {
   Dahiliye: "bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200/60",
@@ -18,6 +19,8 @@ const BRANCH_COLORS: Record<string, string> = {
 };
 
 export function DoctorsPage() {
+  const { hasRole } = useAuth();
+  const canManage = hasRole("Admin");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -48,6 +51,7 @@ export function DoctorsPage() {
       if (branchFilter && d.branch !== branchFilter) return false;
       if (!q) return true;
       return (
+        d.displayName.toLocaleLowerCase("tr-TR").includes(q) ||
         d.name.toLocaleLowerCase("tr-TR").includes(q) ||
         d.email.toLocaleLowerCase("tr-TR").includes(q)
       );
@@ -122,9 +126,11 @@ export function DoctorsPage() {
             className="sm:w-48"
           />
         </div>
-        <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>
-          Yeni Doktor Ekle
-        </Button>
+        {canManage && (
+          <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>
+            Yeni Doktor Ekle
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -135,14 +141,16 @@ export function DoctorsPage() {
                 <th className="text-left px-5 py-3 font-medium">Ad</th>
                 <th className="text-center px-5 py-3 font-medium">Branş</th>
                 <th className="text-left px-5 py-3 font-medium">E-posta</th>
-                <th className="text-right px-5 py-3 font-medium">İşlemler</th>
+                {canManage && (
+                  <th className="text-right px-5 py-3 font-medium">İşlemler</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 4 }).map((__, j) => (
+                    {Array.from({ length: canManage ? 4 : 3 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-3 w-full max-w-[160px] bg-slate-100 rounded animate-pulse" />
                       </td>
@@ -151,7 +159,7 @@ export function DoctorsPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-16 text-center text-slate-500">
+                  <td colSpan={canManage ? 4 : 3} className="px-5 py-16 text-center text-slate-500">
                     <Stethoscope className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     {search || branchFilter
                       ? "Arama kriterleriyle eşleşen doktor bulunamadı."
@@ -162,7 +170,7 @@ export function DoctorsPage() {
                 filtered.map((d) => (
                   <tr key={d.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3.5">
-                      <div className="font-medium text-slate-900">{d.name}</div>
+                      <div className="font-medium text-slate-900">{d.displayName}</div>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span
@@ -174,27 +182,29 @@ export function DoctorsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">{d.email}</td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="inline-flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={<Pencil className="w-3.5 h-3.5" />}
-                          onClick={() => openEdit(d)}
-                        >
-                          Düzenle
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-rose-600 hover:bg-rose-50"
-                          icon={<Trash2 className="w-3.5 h-3.5" />}
-                          onClick={() => setDeleteTarget(d)}
-                        >
-                          Sil
-                        </Button>
-                      </div>
-                    </td>
+                    {canManage && (
+                      <td className="px-5 py-3 text-right">
+                        <div className="inline-flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Pencil className="w-3.5 h-3.5" />}
+                            onClick={() => openEdit(d)}
+                          >
+                            Düzenle
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-rose-600 hover:bg-rose-50"
+                            icon={<Trash2 className="w-3.5 h-3.5" />}
+                            onClick={() => setDeleteTarget(d)}
+                          >
+                            Sil
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -209,25 +219,29 @@ export function DoctorsPage() {
         )}
       </div>
 
-      <DoctorFormModal
-        open={modalOpen}
-        doctor={editing}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSubmit}
-      />
+      {canManage && (
+        <>
+          <DoctorFormModal
+            open={modalOpen}
+            doctor={editing}
+            onClose={() => setModalOpen(false)}
+            onSubmit={handleSubmit}
+          />
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Doktoru Sil"
-        message={
-          deleteTarget
-            ? `${deleteTarget.name} adlı doktoru silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`
-            : ""
-        }
-        loading={deleting}
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+          <ConfirmDialog
+            open={!!deleteTarget}
+            title="Doktoru Sil"
+            message={
+              deleteTarget
+                ? `${deleteTarget.displayName} adlı doktoru silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`
+                : ""
+            }
+            loading={deleting}
+            onConfirm={confirmDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />
+        </>
+      )}
     </div>
   );
 }

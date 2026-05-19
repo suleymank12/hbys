@@ -98,6 +98,7 @@ public class AppointmentService : IAppointmentService
             DoctorId = dto.DoctorId,
             DateTime = when,
             Status = AppointmentStatus.Bekliyor,
+            Type = dto.Type,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };

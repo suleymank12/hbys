@@ -3,14 +3,17 @@ namespace MiniHBYS.Core.DTOs;
 public class DoctorDto
 {
     public int Id { get; set; }
+    public string? Title { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Branch { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }
 
 public class CreateDoctorDto
 {
+    public string? Title { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Branch { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
@@ -19,6 +22,7 @@ public class CreateDoctorDto
 
 public class UpdateDoctorDto
 {
+    public string? Title { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Branch { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;

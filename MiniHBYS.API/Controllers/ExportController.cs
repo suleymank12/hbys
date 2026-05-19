@@ -92,6 +92,7 @@ public class ExportController : ControllerBase
             new("Hasta", a => a.PatientFullName),
             new("Doktor", a => a.DoctorName),
             new("Branş", a => a.DoctorBranch),
+            new("Tip", a => a.TypeText),
             new("Durum", a => a.StatusText),
             new("Oluşturulma", a => a.CreatedAt),
         };

@@ -10,6 +10,7 @@ import { Select } from "../../components/ui/Select";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import {
   AppointmentStatus,
+  AppointmentType,
   type Appointment,
   type CreateAppointmentDto,
   type Doctor,
@@ -21,7 +22,14 @@ interface FormValues {
   doctorId: number | null;
   date: string;
   time: string;
+  type: AppointmentType;
 }
+
+const TYPE_OPTIONS = [
+  { value: String(AppointmentType.Poliklinik), label: "Poliklinik" },
+  { value: String(AppointmentType.Kontrol), label: "Kontrol" },
+  { value: String(AppointmentType.Acil), label: "Acil" },
+];
 
 interface Props {
   open: boolean;
@@ -79,6 +87,7 @@ export function AppointmentFormModal({
       doctorId: null,
       date: "",
       time: "",
+      type: AppointmentType.Poliklinik,
     },
   });
 
@@ -89,6 +98,7 @@ export function AppointmentFormModal({
         doctorId: null,
         date: initialDate ?? "",
         time: initialTime ?? "",
+        type: AppointmentType.Poliklinik,
       });
       setPreview(null);
     }
@@ -173,7 +183,7 @@ export function AppointmentFormModal({
     () =>
       doctors.map((d) => ({
         value: d.id,
-        label: d.name,
+        label: d.displayName,
         sublabel: d.branch,
       })),
     [doctors]
@@ -185,6 +195,7 @@ export function AppointmentFormModal({
       patientId: values.patientId,
       doctorId: values.doctorId,
       dateTime: toIsoUtc(values.date, values.time),
+      type: values.type,
     };
     await onSubmit(dto);
   });
@@ -282,6 +293,19 @@ export function AppointmentFormModal({
             )}
           />
         </div>
+
+        <Controller
+          control={control}
+          name="type"
+          render={({ field }) => (
+            <Select
+              label="Randevu Tipi"
+              value={String(field.value)}
+              onChange={(v) => field.onChange(Number(v) as AppointmentType)}
+              options={TYPE_OPTIONS}
+            />
+          )}
+        />
 
         {preview && (
           <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-lg bg-medical-50 border border-medical-100 text-sm text-medical-800">

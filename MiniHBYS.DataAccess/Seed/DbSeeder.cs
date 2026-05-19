@@ -118,18 +118,18 @@ public static class DbSeeder
 
     private static async Task SeedDoctorsAsync(AppDbContext context)
     {
-        var data = new (string Name, string Branch, string Email)[]
+        var data = new (string Title, string Name, string Branch, string Email)[]
         {
-            ("Dr. Ahmet Yılmaz",    "Dahiliye",    "ahmet.yilmaz@minihbys.com"),
-            ("Dr. Ayşe Demir",      "Dahiliye",    "ayse.demir@minihbys.com"),
-            ("Dr. Mehmet Kaya",     "Kardiyoloji", "mehmet.kaya@minihbys.com"),
-            ("Dr. Fatma Şahin",     "Kardiyoloji", "fatma.sahin@minihbys.com"),
-            ("Dr. Mustafa Çelik",   "Ortopedi",    "mustafa.celik@minihbys.com"),
-            ("Dr. Zeynep Arslan",   "Ortopedi",    "zeynep.arslan@minihbys.com"),
-            ("Dr. Hasan Doğan",     "Göz",         "hasan.dogan@minihbys.com"),
-            ("Dr. Emine Koç",       "Göz",         "emine.koc@minihbys.com"),
-            ("Dr. Ali Aydın",       "KBB",         "ali.aydin@minihbys.com"),
-            ("Dr. Hatice Öztürk",   "KBB",         "hatice.ozturk@minihbys.com"),
+            ("Uzm. Dr.",  "Ahmet Yılmaz",   "Dahiliye",    "ahmet.yilmaz@minihbys.com"),
+            ("Dr.",       "Ayşe Demir",     "Dahiliye",    "ayse.demir@minihbys.com"),
+            ("Prof. Dr.", "Mehmet Kaya",    "Kardiyoloji", "mehmet.kaya@minihbys.com"),
+            ("Doç. Dr.",  "Fatma Şahin",    "Kardiyoloji", "fatma.sahin@minihbys.com"),
+            ("Op. Dr.",   "Mustafa Çelik",  "Ortopedi",    "mustafa.celik@minihbys.com"),
+            ("Uzm. Dr.",  "Zeynep Arslan",  "Ortopedi",    "zeynep.arslan@minihbys.com"),
+            ("Op. Dr.",   "Hasan Doğan",    "Göz",         "hasan.dogan@minihbys.com"),
+            ("Uzm. Dr.",  "Emine Koç",      "Göz",         "emine.koc@minihbys.com"),
+            ("Doç. Dr.",  "Ali Aydın",      "KBB",         "ali.aydin@minihbys.com"),
+            ("Uzm. Dr.",  "Hatice Öztürk",  "KBB",         "hatice.ozturk@minihbys.com"),
         };
 
         var password = BCrypt.Net.BCrypt.HashPassword("Doctor123!");
@@ -141,9 +141,10 @@ public static class DbSeeder
             if (await context.Users.AnyAsync(u => u.Email == d.Email))
                 continue;
 
+            var displayName = $"{d.Title} {d.Name}";
             var user = new User
             {
-                Name = d.Name,
+                Name = displayName,
                 Email = d.Email,
                 Password = password,
                 Role = UserRole.Doktor,
@@ -155,6 +156,7 @@ public static class DbSeeder
 
             await context.Doctors.AddAsync(new Doctor
             {
+                Title = d.Title,
                 Name = d.Name,
                 Branch = d.Branch,
                 UserId = user.Id,
@@ -225,12 +227,20 @@ public static class DbSeeder
             else if (i < 27) status = AppointmentStatus.Bekliyor;
             else status = AppointmentStatus.IptalEdildi;
 
+            var type = (i % 5) switch
+            {
+                0 => AppointmentType.Kontrol,
+                1 => AppointmentType.Acil,
+                _ => AppointmentType.Poliklinik
+            };
+
             appointments.Add(new Appointment
             {
                 Patient = patient,
                 Doctor = doctor,
                 DateTime = DateTime.SpecifyKind(when, DateTimeKind.Utc),
-                Status = status
+                Status = status,
+                Type = type
             });
         }
 

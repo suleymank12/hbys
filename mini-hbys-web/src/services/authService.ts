@@ -5,6 +5,7 @@ import {
 } from "./authService.constants";
 import type {
   ApiResponse,
+  ChangePasswordDto,
   CurrentUser,
   LoginDto,
   LoginResponse,
@@ -30,6 +31,15 @@ export const authService = {
   me: async (): Promise<CurrentUser> => {
     const { data } = await apiClient.get<ApiResponse<CurrentUser>>("/auth/me");
     return unwrap(data);
+  },
+  changePassword: async (dto: ChangePasswordDto): Promise<void> => {
+    const { data } = await apiClient.put<ApiResponse<boolean>>(
+      "/auth/change-password",
+      dto
+    );
+    if (!data.success) {
+      throw new Error(data.message || "Şifre değiştirilemedi.");
+    }
   },
   logout: () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);

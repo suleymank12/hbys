@@ -7,6 +7,9 @@ public class CreateDoctorValidator : AbstractValidator<CreateDoctorDto>
 {
     public CreateDoctorValidator()
     {
+        RuleFor(x => x.Title)
+            .MaximumLength(20).WithMessage("Ünvan en fazla 20 karakter olabilir.");
+
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Ad alanı boş olamaz.")
             .MaximumLength(100).WithMessage("Ad en fazla 100 karakter olabilir.");

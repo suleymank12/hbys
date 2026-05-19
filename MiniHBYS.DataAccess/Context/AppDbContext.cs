@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Doctor>(b =>
         {
+            b.Property(d => d.Title).HasMaxLength(20);
             b.Property(d => d.Name).IsRequired().HasMaxLength(100);
             b.Property(d => d.Branch).IsRequired().HasMaxLength(100);
 
@@ -70,6 +71,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Appointment>(b =>
         {
             b.Property(a => a.Status).HasConversion<int>();
+            b.Property(a => a.Type).HasConversion<int>();
 
             b.HasOne(a => a.Patient)
                 .WithMany(p => p.Appointments)

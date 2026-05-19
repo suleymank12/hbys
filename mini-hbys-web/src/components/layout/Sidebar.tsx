@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
     to: "/doctors",
     label: "Doktorlar",
     icon: Stethoscope,
-    roles: ["Admin"],
+    roles: ["Admin", "Sekreter"],
   },
   {
     to: "/appointments",

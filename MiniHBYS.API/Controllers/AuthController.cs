@@ -56,4 +56,22 @@ public class AuthController : ControllerBase
         var result = await _service.GetCurrentUserAsync(userId);
         return result.Success ? Ok(result) : NotFound(result);
     }
+
+    /// <summary>Oturum sahibi kullanıcının şifresini değiştirir.</summary>
+    [HttpPut("change-password")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                  ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(sub, out var userId))
+            return Unauthorized(ApiResponse<bool>.Fail("Geçersiz token."));
+
+        var result = await _service.ChangePasswordAsync(userId, dto);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }

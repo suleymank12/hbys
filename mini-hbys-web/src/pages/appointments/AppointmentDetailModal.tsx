@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarDays, User, Stethoscope, Briefcase, Clock } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
-import { StatusBadge } from "../../components/ui/StatusBadge";
+import { AppointmentTypeBadge, StatusBadge } from "../../components/ui/StatusBadge";
 import type { Appointment } from "../../types";
 
 interface Props {
@@ -50,6 +50,10 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
             value={appointment.doctorBranch}
           />
           <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100">
+            <span className="text-sm text-slate-500">Tip</span>
+            <AppointmentTypeBadge type={appointment.type} />
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-sm text-slate-500">Durum</span>
             <StatusBadge status={appointment.status} />
           </div>

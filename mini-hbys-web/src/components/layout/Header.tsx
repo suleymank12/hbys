@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, Bell, UserCircle2, LogOut, ChevronDown } from "lucide-react";
+import { Menu, Bell, UserCircle2, LogOut, ChevronDown, KeyRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { ChangePasswordModal } from "../ChangePasswordModal";
 
 const titles: Record<string, string> = {
   "/": "Gösterge Paneli",
@@ -21,6 +22,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const title =
@@ -115,6 +117,17 @@ export function Header({ onMenuClick }: HeaderProps) {
                   </div>
                 </div>
                 <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setPasswordModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  role="menuitem"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  Şifre Değiştir
+                </button>
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
                   role="menuitem"
@@ -124,6 +137,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                 </button>
               </div>
             )}
+            <ChangePasswordModal
+              open={passwordModalOpen}
+              onClose={() => setPasswordModalOpen(false)}
+            />
           </div>
         </div>
       </div>

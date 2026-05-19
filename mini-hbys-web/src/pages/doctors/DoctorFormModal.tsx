@@ -5,9 +5,15 @@ import { Button } from "../../components/ui/Button";
 import { FormField } from "../../components/ui/FormField";
 import { Select } from "../../components/ui/Select";
 import { BRANCH_OPTIONS } from "../../constants/branches";
-import type { CreateDoctorDto, Doctor, UpdateDoctorDto } from "../../types";
+import {
+  DOCTOR_TITLE_OPTIONS,
+  type CreateDoctorDto,
+  type Doctor,
+  type UpdateDoctorDto,
+} from "../../types";
 
 interface FormValues {
+  title: string;
   name: string;
   branch: string;
   email: string;
@@ -24,6 +30,8 @@ interface Props {
   ) => Promise<void>;
 }
 
+const TITLE_OPTIONS = DOCTOR_TITLE_OPTIONS.map((t) => ({ value: t, label: t }));
+
 export function DoctorFormModal({ open, doctor, onClose, onSubmit }: Props) {
   const isEdit = !!doctor;
   const {
@@ -37,6 +45,7 @@ export function DoctorFormModal({ open, doctor, onClose, onSubmit }: Props) {
   useEffect(() => {
     if (!open) return;
     reset({
+      title: doctor?.title ?? "",
       name: doctor?.name ?? "",
       branch: doctor?.branch ?? "",
       email: doctor?.email ?? "",
@@ -46,6 +55,7 @@ export function DoctorFormModal({ open, doctor, onClose, onSubmit }: Props) {
 
   const submit = handleSubmit(async (values) => {
     const base = {
+      title: values.title ? values.title : null,
       name: values.name.trim(),
       branch: values.branch,
       email: values.email.trim(),
@@ -70,14 +80,29 @@ export function DoctorFormModal({ open, doctor, onClose, onSubmit }: Props) {
       size="lg"
     >
       <form onSubmit={submit} className="space-y-4">
-        <FormField
-          label="Ad"
-          error={errors.name?.message}
-          {...register("name", {
-            required: "Ad zorunludur.",
-            maxLength: { value: 100, message: "En fazla 100 karakter." },
-          })}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">
+          <Controller
+            control={control}
+            name="title"
+            render={({ field }) => (
+              <Select
+                label="Ünvan"
+                value={field.value}
+                onChange={field.onChange}
+                options={TITLE_OPTIONS}
+                placeholder="Seçiniz"
+              />
+            )}
+          />
+          <FormField
+            label="Ad"
+            error={errors.name?.message}
+            {...register("name", {
+              required: "Ad zorunludur.",
+              maxLength: { value: 100, message: "En fazla 100 karakter." },
+            })}
+          />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Controller
@@ -113,12 +138,12 @@ export function DoctorFormModal({ open, doctor, onClose, onSubmit }: Props) {
           <FormField
             label="Şifre"
             type="password"
-            placeholder="En az 6 karakter"
+            placeholder="En az 10 karakter"
             autoComplete="new-password"
             error={errors.password?.message}
             {...register("password", {
               required: "Şifre zorunludur.",
-              minLength: { value: 6, message: "En az 6 karakter olmalıdır." },
+              minLength: { value: 10, message: "En az 10 karakter olmalıdır." },
             })}
           />
         )}

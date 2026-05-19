@@ -13,6 +13,8 @@ public class AppointmentDto
     public DateTime DateTime { get; set; }
     public AppointmentStatus Status { get; set; }
     public string StatusText { get; set; } = string.Empty;
+    public AppointmentType Type { get; set; }
+    public string TypeText { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }
 
@@ -21,6 +23,7 @@ public class CreateAppointmentDto
     public int PatientId { get; set; }
     public int DoctorId { get; set; }
     public DateTime DateTime { get; set; }
+    public AppointmentType Type { get; set; } = AppointmentType.Poliklinik;
 }
 
 public class UpdateAppointmentStatusDto

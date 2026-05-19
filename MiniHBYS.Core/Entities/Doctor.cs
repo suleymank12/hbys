@@ -2,6 +2,7 @@ namespace MiniHBYS.Core.Entities;
 
 public class Doctor : BaseEntity
 {
+    public string? Title { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Branch { get; set; } = string.Empty;
 

@@ -13,7 +13,12 @@ import { tr } from "date-fns/locale";
 import { Button } from "../../components/ui/Button";
 import { Pagination } from "../../components/ui/Pagination";
 import { medicalRecordService } from "../../services/medicalRecordService";
-import { AppointmentStatus, type Appointment, type MedicalRecord } from "../../types";
+import {
+  AppointmentStatus,
+  AppointmentType,
+  type Appointment,
+  type MedicalRecord,
+} from "../../types";
 import { MedicalRecordModal } from "../appointments/MedicalRecordModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { ExportButton } from "../../components/ui/ExportButton";
@@ -42,6 +47,8 @@ const recordToAppointment = (r: MedicalRecord): Appointment => ({
   dateTime: r.appointmentDate,
   status: AppointmentStatus.Tamamlandi,
   statusText: "Tamamlandı",
+  type: AppointmentType.Poliklinik,
+  typeText: "Poliklinik",
   createdAt: r.createdAt,
 });
 

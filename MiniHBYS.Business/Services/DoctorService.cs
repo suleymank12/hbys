@@ -67,6 +67,7 @@ public class DoctorService : IDoctorService
 
         var entity = new Doctor
         {
+            Title = string.IsNullOrWhiteSpace(dto.Title) ? null : dto.Title.Trim(),
             Name = dto.Name,
             Branch = dto.Branch,
             UserId = user.Id,
@@ -91,6 +92,7 @@ public class DoctorService : IDoctorService
             await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != entity.UserId))
             return ApiResponse<DoctorDto>.Fail("Bu e-posta adresi başka bir kullanıcı tarafından kullanılıyor.");
 
+        entity.Title = string.IsNullOrWhiteSpace(dto.Title) ? null : dto.Title.Trim();
         entity.Name = dto.Name;
         entity.Branch = dto.Branch;
         entity.UpdatedAt = DateTime.UtcNow;

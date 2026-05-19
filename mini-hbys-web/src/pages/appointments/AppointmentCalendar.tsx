@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AppointmentStatus, type Appointment } from "../../types";
+import { AppointmentStatus, AppointmentType, type Appointment } from "../../types";
 
 interface Props {
   appointments: Appointment[];
@@ -284,6 +284,18 @@ function SlotRow({
   );
 }
 
+const TYPE_LABEL: Record<AppointmentType, string> = {
+  [AppointmentType.Poliklinik]: "P",
+  [AppointmentType.Kontrol]: "K",
+  [AppointmentType.Acil]: "A",
+};
+
+const TYPE_PILL: Record<AppointmentType, string> = {
+  [AppointmentType.Poliklinik]: "bg-sky-200 text-sky-900",
+  [AppointmentType.Kontrol]: "bg-indigo-200 text-indigo-900",
+  [AppointmentType.Acil]: "bg-red-200 text-red-900",
+};
+
 function AppointmentCard({
   appointment,
   onClick,
@@ -310,7 +322,13 @@ function AppointmentCard({
             STATUS_DOT[appointment.status]
           }`}
         />
-        <span className="font-medium truncate">{appointment.patientFullName}</span>
+        <span className="font-medium truncate flex-1">{appointment.patientFullName}</span>
+        <span
+          title={appointment.typeText}
+          className={`shrink-0 inline-flex items-center justify-center w-3.5 h-3.5 rounded text-[9px] font-bold leading-none ${TYPE_PILL[appointment.type]}`}
+        >
+          {TYPE_LABEL[appointment.type]}
+        </span>
       </div>
       <div className="text-[10px] opacity-80 truncate pl-2.5">
         {appointment.doctorName}

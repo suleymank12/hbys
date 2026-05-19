@@ -29,3 +29,9 @@ public class CurrentUserDto
     public string RoleText { get; set; } = string.Empty;
     public int? DoctorId { get; set; }
 }
+
+public class ChangePasswordDto
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}

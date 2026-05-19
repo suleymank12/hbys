@@ -22,7 +22,9 @@ public class MappingProfile : Profile
 
         CreateMap<Doctor, DoctorDto>()
             .ForMember(d => d.Email,
-                o => o.MapFrom(s => s.User != null ? s.User.Email : string.Empty));
+                o => o.MapFrom(s => s.User != null ? s.User.Email : string.Empty))
+            .ForMember(d => d.DisplayName,
+                o => o.MapFrom(s => BuildDoctorDisplayName(s.Title, s.Name)));
         CreateMap<CreateDoctorDto, Doctor>()
             .ForMember(d => d.UserId, o => o.Ignore())
             .ForMember(d => d.User, o => o.Ignore());
@@ -34,11 +36,13 @@ public class MappingProfile : Profile
             .ForMember(d => d.PatientFullName,
                 o => o.MapFrom(s => s.Patient != null ? $"{s.Patient.Name} {s.Patient.Surname}" : string.Empty))
             .ForMember(d => d.DoctorName,
-                o => o.MapFrom(s => s.Doctor != null ? s.Doctor.Name : string.Empty))
+                o => o.MapFrom(s => s.Doctor != null ? BuildDoctorDisplayName(s.Doctor.Title, s.Doctor.Name) : string.Empty))
             .ForMember(d => d.DoctorBranch,
                 o => o.MapFrom(s => s.Doctor != null ? s.Doctor.Branch : string.Empty))
             .ForMember(d => d.StatusText,
-                o => o.MapFrom(s => GetStatusText(s.Status)));
+                o => o.MapFrom(s => GetStatusText(s.Status)))
+            .ForMember(d => d.TypeText,
+                o => o.MapFrom(s => GetTypeText(s.Type)));
         CreateMap<CreateAppointmentDto, Appointment>();
 
         CreateMap<MedicalRecord, MedicalRecordDto>()
@@ -48,7 +52,7 @@ public class MappingProfile : Profile
                     : string.Empty))
             .ForMember(d => d.DoctorName,
                 o => o.MapFrom(s => s.Appointment != null && s.Appointment.Doctor != null
-                    ? s.Appointment.Doctor.Name
+                    ? BuildDoctorDisplayName(s.Appointment.Doctor.Title, s.Appointment.Doctor.Name)
                     : string.Empty))
             .ForMember(d => d.DoctorBranch,
                 o => o.MapFrom(s => s.Appointment != null && s.Appointment.Doctor != null
@@ -70,7 +74,7 @@ public class MappingProfile : Profile
                     : string.Empty))
             .ForMember(d => d.DoctorName,
                 o => o.MapFrom(s => s.MedicalRecord != null && s.MedicalRecord.Appointment != null && s.MedicalRecord.Appointment.Doctor != null
-                    ? s.MedicalRecord.Appointment.Doctor.Name
+                    ? BuildDoctorDisplayName(s.MedicalRecord.Appointment.Doctor.Title, s.MedicalRecord.Appointment.Doctor.Name)
                     : string.Empty))
             .ForMember(d => d.DoctorBranch,
                 o => o.MapFrom(s => s.MedicalRecord != null && s.MedicalRecord.Appointment != null && s.MedicalRecord.Appointment.Doctor != null
@@ -86,6 +90,9 @@ public class MappingProfile : Profile
             .ForMember(d => d.VitalSigns, o => o.Ignore());
     }
 
+    private static string BuildDoctorDisplayName(string? title, string name) =>
+        string.IsNullOrWhiteSpace(title) ? name : $"{title.Trim()} {name}";
+
     private static string GetStatusText(AppointmentStatus status) => status switch
     {
         AppointmentStatus.Bekliyor => "Bekliyor",
@@ -95,6 +102,14 @@ public class MappingProfile : Profile
         AppointmentStatus.IptalEdildi => "İptal Edildi",
         AppointmentStatus.Gelmedi => "Gelmedi",
         _ => status.ToString()
+    };
+
+    private static string GetTypeText(AppointmentType type) => type switch
+    {
+        AppointmentType.Poliklinik => "Poliklinik",
+        AppointmentType.Kontrol => "Kontrol",
+        AppointmentType.Acil => "Acil",
+        _ => type.ToString()
     };
 
     private static string GetGenderText(Gender gender) => gender switch

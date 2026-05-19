@@ -9,6 +9,22 @@ export const AppointmentStatus = {
 
 export type AppointmentStatus = (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
 
+export const AppointmentType = {
+  Poliklinik: 0,
+  Kontrol: 1,
+  Acil: 2,
+} as const;
+
+export type AppointmentType = (typeof AppointmentType)[keyof typeof AppointmentType];
+
+export const DOCTOR_TITLE_OPTIONS = [
+  "Dr.",
+  "Uzm. Dr.",
+  "Doç. Dr.",
+  "Prof. Dr.",
+  "Op. Dr.",
+] as const;
+
 export const UserRole = {
   Admin: 0,
   Doktor: 1,
@@ -151,13 +167,16 @@ export interface UpdatePatientDto {
 
 export interface Doctor {
   id: number;
+  title?: string | null;
   name: string;
   branch: string;
   email: string;
+  displayName: string;
   createdAt: string;
 }
 
 export interface CreateDoctorDto {
+  title?: string | null;
   name: string;
   branch: string;
   email: string;
@@ -165,6 +184,7 @@ export interface CreateDoctorDto {
 }
 
 export interface UpdateDoctorDto {
+  title?: string | null;
   name: string;
   branch: string;
   email: string;
@@ -180,6 +200,8 @@ export interface Appointment {
   dateTime: string;
   status: AppointmentStatus;
   statusText: string;
+  type: AppointmentType;
+  typeText: string;
   createdAt: string;
 }
 
@@ -187,6 +209,12 @@ export interface CreateAppointmentDto {
   patientId: number;
   doctorId: number;
   dateTime: string;
+  type: AppointmentType;
+}
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface UpdateAppointmentStatusDto {

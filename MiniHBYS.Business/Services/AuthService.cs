@@ -87,6 +87,46 @@ public class AuthService : IAuthService
         }, "Giriş başarılı.");
     }
 
+    public async Task<ApiResponse<bool>> ChangePasswordAsync(int userId, ChangePasswordDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.CurrentPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
+            return ApiResponse<bool>.Fail("Mevcut ve yeni şifre alanları zorunludur.");
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user is null)
+            return ApiResponse<bool>.Fail("Kullanıcı bulunamadı.");
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.Password))
+        {
+            await _audit.LogForAsync(
+                userId: user.Id,
+                userName: user.Name,
+                userRole: user.Role.ToString(),
+                entityType: "User",
+                entityId: user.Id,
+                action: "ChangePasswordFailed",
+                details: System.Text.Json.JsonSerializer.Serialize(new { reason = "Mevcut şifre hatalı" }),
+                ipAddress: _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString());
+            return ApiResponse<bool>.Fail("Mevcut şifre hatalı.");
+        }
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        await _audit.LogForAsync(
+            userId: user.Id,
+            userName: user.Name,
+            userRole: user.Role.ToString(),
+            entityType: "User",
+            entityId: user.Id,
+            action: "ChangePassword",
+            details: null,
+            ipAddress: _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString());
+
+        return ApiResponse<bool>.Ok(true, "Şifre başarıyla değiştirildi.");
+    }
+
     public async Task<ApiResponse<CurrentUserDto>> GetCurrentUserAsync(int userId)
     {
         var user = await _context.Users

@@ -23,7 +23,7 @@ import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { DatePicker } from "../../components/ui/DatePicker";
 import { Pagination } from "../../components/ui/Pagination";
 import { Select } from "../../components/ui/Select";
-import { StatusBadge } from "../../components/ui/StatusBadge";
+import { AppointmentTypeBadge, StatusBadge } from "../../components/ui/StatusBadge";
 import { appointmentService } from "../../services/appointmentService";
 import { doctorService } from "../../services/doctorService";
 import { patientService } from "../../services/patientService";
@@ -249,7 +249,7 @@ export function AppointmentsPage() {
       { value: "", label: "Tüm doktorlar" },
       ...doctors.map((d) => ({
         value: String(d.id),
-        label: `${d.name} — ${d.branch}`,
+        label: `${d.displayName} — ${d.branch}`,
       })),
     ],
     [doctors]
@@ -429,6 +429,7 @@ export function AppointmentsPage() {
                 <th className="text-left px-5 py-3 font-medium">Tarih & Saat</th>
                 <th className="text-left px-5 py-3 font-medium">Hasta</th>
                 <th className="text-left px-5 py-3 font-medium">Doktor</th>
+                <th className="text-center px-5 py-3 font-medium">Tip</th>
                 <th className="text-center px-5 py-3 font-medium">Durum</th>
                 <th className="text-right px-5 py-3 font-medium">İşlemler</th>
               </tr>
@@ -437,7 +438,7 @@ export function AppointmentsPage() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 5 }).map((__, j) => (
+                    {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-3 w-full max-w-[160px] bg-slate-100 rounded animate-pulse" />
                       </td>
@@ -446,7 +447,7 @@ export function AppointmentsPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-16 text-center text-slate-500">
+                  <td colSpan={6} className="px-5 py-16 text-center text-slate-500">
                     <CalendarDays className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     {hasFilter
                       ? "Filtreyle eşleşen randevu bulunamadı."
@@ -472,6 +473,9 @@ export function AppointmentsPage() {
                       <td className="px-5 py-3.5">
                         <div className="text-slate-700">{a.doctorName}</div>
                         <div className="text-xs text-slate-500">{a.doctorBranch}</div>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <AppointmentTypeBadge type={a.type} />
                       </td>
                       <td className="px-5 py-3.5 text-center">
                         <StatusBadge status={a.status} />
