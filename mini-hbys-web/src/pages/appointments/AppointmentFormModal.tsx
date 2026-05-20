@@ -246,6 +246,7 @@ export function AppointmentFormModal({
     <Modal
       open={open}
       onClose={onClose}
+      icon={CalendarCheck}
       title="Yeni Randevu"
       description="Hasta ve doktor için müsait bir zaman seçin."
       size="lg"

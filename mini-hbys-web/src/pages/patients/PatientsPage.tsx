@@ -205,7 +205,7 @@ export function PatientsPage() {
                     <td className="px-5 py-3.5 text-slate-600">{p.genderText}</td>
                     <td className="px-5 py-3.5 text-slate-600 tabular-nums">{p.phone}</td>
                     <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-medical-50 text-medical-700 ring-1 ring-inset ring-medical-200/60">
                         {p.insuranceTypeText}
                       </span>
                     </td>

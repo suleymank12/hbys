@@ -16,6 +16,7 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
     <Modal
       open={open}
       onClose={onClose}
+      icon={CalendarDays}
       title="Randevu Detayı"
       description="Randevu ile ilgili bilgiler aşağıda listelenmiştir."
       size="sm"

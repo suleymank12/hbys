@@ -197,6 +197,7 @@ export function MedicalRecordModal({
     <Modal
       open={open}
       onClose={onClose}
+      icon={ClipboardList}
       title={
         effectiveReadonly
           ? "Muayene Kaydı Detayı"

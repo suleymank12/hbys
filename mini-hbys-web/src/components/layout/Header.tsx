@@ -28,7 +28,11 @@ export function Header({ onMenuClick }: HeaderProps) {
   const title =
     titles[pathname] ||
     Object.entries(titles).find(([k]) => k !== "/" && pathname.startsWith(k))?.[1] ||
-    "Mini HBYS";
+    "MediCore HBYS";
+
+  useEffect(() => {
+    document.title = `${title} · MediCore HBYS`;
+  }, [title]);
 
   useEffect(() => {
     if (!menuOpen) return;

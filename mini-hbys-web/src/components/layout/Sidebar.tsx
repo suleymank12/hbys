@@ -93,7 +93,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <HeartPulse className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-bold text-slate-900 leading-tight">Mini HBYS</div>
+              <div className="font-bold text-slate-900 leading-tight">MediCore HBYS</div>
               <div className="text-xs text-slate-500 leading-tight">Hastane Sistemi</div>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         <div className="px-6 py-4 border-t border-slate-100 text-center">
-          <div className="text-xs text-slate-400">© 2026 Mini HBYS</div>
+          <div className="text-xs text-slate-400">© 2026 MediCore HBYS</div>
           <div className="text-[11px] text-slate-300 mt-0.5">v1.0.0</div>
         </div>
       </aside>

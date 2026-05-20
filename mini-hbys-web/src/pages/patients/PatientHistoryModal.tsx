@@ -51,6 +51,7 @@ export function PatientHistoryModal({ open, patient, onClose }: Props) {
     <Modal
       open={open}
       onClose={onClose}
+      icon={FileText}
       title="Hasta Geçmişi"
       description={patient ? `${patient.protocolNumber} · ${patient.fullName}` : ""}
       size="lg"
@@ -133,10 +134,10 @@ function DemographicsCard({ patient }: { patient: Patient }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <InfoRow
           icon={<IdCard className="w-3.5 h-3.5 text-slate-400" />}
-          label="TC Kimlik"
+          label="TC / YKN"
           value={patient.nationalId}
           mono
         />
@@ -146,6 +147,14 @@ function DemographicsCard({ patient }: { patient: Patient }) {
           value={patient.phone}
           mono
         />
+        {patient.email && (
+          <InfoRow
+            icon={<FileText className="w-3.5 h-3.5 text-slate-400" />}
+            label="E-posta"
+            value={patient.email}
+            fullWidth
+          />
+        )}
         <InfoRow
           icon={<MapPin className="w-3.5 h-3.5 text-slate-400" />}
           label="Adres"
@@ -156,6 +165,7 @@ function DemographicsCard({ patient }: { patient: Patient }) {
                 : location
               : patient.address ?? "—"
           }
+          fullWidth
         />
         <InfoRow
           icon={<HeartPulse className="w-3.5 h-3.5 text-slate-400" />}
@@ -169,6 +179,7 @@ function DemographicsCard({ patient }: { patient: Patient }) {
                 }`
               : "—"
           }
+          fullWidth
         />
       </div>
 
@@ -201,24 +212,27 @@ function InfoRow({
   label,
   value,
   mono,
+  fullWidth,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   mono?: boolean;
+  fullWidth?: boolean;
 }) {
   return (
-    <div className="flex items-baseline gap-2 min-w-0">
-      <span className="shrink-0">{icon}</span>
-      <span className="text-[11px] uppercase tracking-wider text-slate-400 font-medium shrink-0">
+    <div className={`min-w-0 ${fullWidth ? "sm:col-span-2" : ""}`}>
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400 font-medium mb-0.5">
+        <span className="shrink-0">{icon}</span>
         {label}
-      </span>
-      <span
-        className={`text-slate-700 truncate ${mono ? "tabular-nums" : ""}`}
-        title={value}
+      </div>
+      <div
+        className={`text-sm text-slate-800 break-words leading-snug ${
+          mono ? "tabular-nums" : ""
+        }`}
       >
         {value}
-      </span>
+      </div>
     </div>
   );
 }

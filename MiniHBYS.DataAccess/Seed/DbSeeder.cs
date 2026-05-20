@@ -16,14 +16,19 @@ public static class DbSeeder
         await SeedDoctorSchedulesAsync(context);
         await SeedIcd10CodesAsync(context);
 
+        var patients = SeedPatients();
+
         if (await context.Patients.AnyAsync())
+        {
+            await MigratePatientIdentitiesAsync(context);
+            await BackfillPatientDetailsAsync(context, patients);
             return;
+        }
 
         var doctors = await context.Doctors
             .Include(d => d.User)
             .ToListAsync();
 
-        var patients = SeedPatients();
         await context.Patients.AddRangeAsync(patients);
         await context.SaveChangesAsync();
 
@@ -243,45 +248,132 @@ public static class DbSeeder
 
     private static List<Patient> SeedPatients()
     {
-        var data = new (string Name, string Surname, string NationalId, DateTime BirthDate, string Phone, string? Email, Gender Gender, BloodType? Blood, InsuranceType Insurance, string? City, string? District)[]
+        var seq = 0;
+        Patient P(
+            string name, string surname, string nationalId, DateTime birthDate,
+            Gender gender, BloodType blood, InsuranceType insurance,
+            string phone, string? email, string city, string district, string address,
+            string emergencyName, string emergencyPhone,
+            string allergies, string chronic)
+            => new()
+            {
+                ProtocolNumber = $"P-{++seq:D6}",
+                Name = name,
+                Surname = surname,
+                NationalId = nationalId,
+                BirthDate = DateTime.SpecifyKind(birthDate, DateTimeKind.Utc),
+                Gender = gender,
+                BloodType = blood,
+                InsuranceType = insurance,
+                Phone = phone,
+                Email = email,
+                City = city,
+                District = district,
+                Address = address,
+                EmergencyContactName = emergencyName,
+                EmergencyContactPhone = emergencyPhone,
+                Allergies = allergies,
+                ChronicDiseases = chronic
+            };
+
+        return new List<Patient>
         {
-            ("Mehmet",   "Yıldız",     "10000000001", new DateTime(1985, 3, 12),  "05321112201", "mehmet.yildiz@example.com",     Gender.Erkek,         BloodType.ARhPositive,  InsuranceType.SGK,     "İstanbul", "Kadıköy"),
-            ("Ayşe",     "Kurt",       "10000000002", new DateTime(1990, 7, 25),  "05321112202", "ayse.kurt@example.com",         Gender.Kadın,         BloodType.BRhPositive,  InsuranceType.SGK,     "İstanbul", "Beşiktaş"),
-            ("Ali",      "Çetin",      "10000000003", new DateTime(1978, 11, 5),  "05321112203", null,                            Gender.Erkek,         BloodType.ORhPositive,  InsuranceType.Ozel,    "Ankara",   "Çankaya"),
-            ("Fatma",    "Aksoy",      "10000000004", new DateTime(2001, 1, 18),  "05321112204", "fatma.aksoy@example.com",       Gender.Kadın,         null,                   InsuranceType.SGK,     "İzmir",    "Karşıyaka"),
-            ("Hüseyin",  "Polat",      "10000000005", new DateTime(1965, 9, 30),  "05321112205", null,                            Gender.Erkek,         BloodType.ABRhPositive, InsuranceType.SGK,     "Bursa",    "Nilüfer"),
-            ("Emine",    "Erdoğan",    "10000000006", new DateTime(1995, 5, 10),  "05321112206", "emine.erdogan@example.com",     Gender.Kadın,         BloodType.ARhNegative,  InsuranceType.SGK,     "İstanbul", "Üsküdar"),
-            ("Mustafa",  "Yalçın",     "10000000007", new DateTime(1982, 2, 22),  "05321112207", "mustafa.yalcin@example.com",    Gender.Erkek,         BloodType.ORhNegative,  InsuranceType.Ozel,    "Antalya",  "Muratpaşa"),
-            ("Zeynep",   "Şimşek",     "10000000008", new DateTime(1998, 12, 3),  "05321112208", null,                            Gender.Kadın,         BloodType.BRhNegative,  InsuranceType.SGK,     "Ankara",   "Keçiören"),
-            ("Hasan",    "Tekin",      "10000000009", new DateTime(1972, 6, 15),  "05321112209", "hasan.tekin@example.com",       Gender.Erkek,         BloodType.ARhPositive,  InsuranceType.SGK,     "İzmir",    "Bornova"),
-            ("Hatice",   "Güneş",      "10000000010", new DateTime(1988, 4, 8),   "05321112210", "hatice.gunes@example.com",      Gender.Kadın,         null,                   InsuranceType.SGK,     "İstanbul", "Şişli"),
-            ("İbrahim",  "Korkmaz",    "10000000011", new DateTime(1960, 10, 20), "05321112211", null,                            Gender.Erkek,         BloodType.ORhPositive,  InsuranceType.SGK,     "Konya",    "Selçuklu"),
-            ("Elif",     "Bulut",      "10000000012", new DateTime(2003, 8, 14),  "05321112212", "elif.bulut@example.com",        Gender.Kadın,         BloodType.ARhPositive,  InsuranceType.SGK,     "İstanbul", "Bakırköy"),
-            ("Osman",    "Ergin",      "10000000013", new DateTime(1975, 1, 27),  "05321112213", null,                            Gender.Erkek,         BloodType.ABRhNegative, InsuranceType.Ozel,    "Ankara",   "Yenimahalle"),
-            ("Merve",    "Keskin",     "10000000014", new DateTime(1992, 11, 9),  "05321112214", "merve.keskin@example.com",      Gender.Kadın,         BloodType.BRhPositive,  InsuranceType.SGK,     "Adana",    "Seyhan"),
-            ("Yusuf",    "Aslan",      "10000000015", new DateTime(1987, 7, 2),   "05321112215", "yusuf.aslan@example.com",       Gender.Erkek,         BloodType.ORhNegative,  InsuranceType.SGK,     "Gaziantep","Şahinbey"),
-            ("Sevgi",    "Duran",      "10000000016", new DateTime(1999, 3, 28),  "05321112216", null,                            Gender.Kadın,         null,                   InsuranceType.Yok,     "İstanbul", "Pendik"),
-            ("Kemal",    "Sarı",       "10000000017", new DateTime(1968, 5, 17),  "05321112217", "kemal.sari@example.com",        Gender.Erkek,         BloodType.ARhNegative,  InsuranceType.SGK,     "Trabzon",  "Ortahisar"),
-            ("Dilek",    "Aktaş",      "10000000018", new DateTime(1994, 9, 4),   "05321112218", "dilek.aktas@example.com",       Gender.Kadın,         BloodType.ABRhPositive, InsuranceType.SGK,     "İstanbul", "Maltepe"),
-            ("Burak",    "Özkan",      "10000000019", new DateTime(1983, 12, 21), "05321112219", null,                            Gender.Erkek,         BloodType.BRhNegative,  InsuranceType.Yabanci, "İstanbul", "Fatih"),
-            ("Selin",    "Yavuz",      "10000000020", new DateTime(2000, 6, 11),  "05321112220", "selin.yavuz@example.com",       Gender.Kadın,         BloodType.ORhPositive,  InsuranceType.Ozel,    "İzmir",    "Konak"),
+            P("Mehmet",  "Yıldız",   "10000000001", new(1985, 3, 12),  Gender.Erkek, BloodType.ARhPositive,  InsuranceType.SGK,     "05321112201", "mehmet.yildiz@example.com",  "İstanbul",  "Kadıköy",      "Caferağa Mah., Moda Cad. No:42 D:5",         "Ayşe Yıldız (Eş)",     "05331114401", "Penisilin",     "Hipertansiyon"),
+            P("Ayşe",    "Kurt",     "10000000002", new(1990, 7, 25),  Gender.Kadın, BloodType.BRhPositive,  InsuranceType.SGK,     "05321112202", "ayse.kurt@example.com",      "İstanbul",  "Beşiktaş",     "Levent Mah., Büyükdere Cad. No:128 D:12",    "Mehmet Kurt (Eş)",     "05331114402", "Yok",           "Yok"),
+            P("Ali",     "Çetin",    "10000000003", new(1978, 11, 5),  Gender.Erkek, BloodType.ORhPositive,  InsuranceType.Ozel,    "05321112203", "ali.cetin@example.com",      "Ankara",    "Çankaya",      "Kavaklıdere Mah., Tunalı Hilmi Cad. No:71 D:8", "Hatice Çetin (Eş)",  "05331114403", "Polen, Toz",    "Astım"),
+            P("Fatma",   "Aksoy",    "10000000004", new(2001, 1, 18),  Gender.Kadın, BloodType.ARhPositive,  InsuranceType.SGK,     "05321112204", "fatma.aksoy@example.com",    "İzmir",     "Karşıyaka",    "Bostanlı Mah., Cemal Gürsel Cad. No:215 D:3",   "Hasan Aksoy (Baba)", "05331114404", "Yok",           "Yok"),
+            P("Hüseyin", "Polat",    "10000000005", new(1965, 9, 30),  Gender.Erkek, BloodType.ABRhPositive, InsuranceType.SGK,     "05321112205", "huseyin.polat@example.com",  "Bursa",     "Nilüfer",      "Beşevler Mah., İzmir Yolu Cad. No:312 D:7",     "Sevim Polat (Eş)",   "05331114405", "Aspirin",       "Tip 2 Diyabet, Hipertansiyon"),
+            P("Emine",   "Erdoğan",  "10000000006", new(1995, 5, 10),  Gender.Kadın, BloodType.ARhNegative,  InsuranceType.SGK,     "05321112206", "emine.erdogan@example.com",  "İstanbul",  "Üsküdar",      "Murat Reis Mah., Selmanipak Cad. No:54 D:9",    "Selma Erdoğan (Anne)","05331114406", "Lateks",        "Yok"),
+            P("Mustafa", "Yalçın",   "10000000007", new(1982, 2, 22),  Gender.Erkek, BloodType.ORhNegative,  InsuranceType.Ozel,    "05321112207", "mustafa.yalcin@example.com", "Antalya",   "Muratpaşa",    "Lara Mah., Kenan Evren Bulvarı No:184 D:11",    "Zeynep Yalçın (Eş)", "05331114407", "Yok",           "Hiperlipidemi"),
+            P("Zeynep",  "Şimşek",   "10000000008", new(1998, 12, 3),  Gender.Kadın, BloodType.BRhNegative,  InsuranceType.SGK,     "05321112208", "zeynep.simsek@example.com",  "Ankara",    "Keçiören",     "Etlik Mah., Yenikapı Sok. No:22 D:4",           "Ali Şimşek (Baba)",  "05331114408", "Penisilin",     "Migren"),
+            P("Hasan",   "Tekin",    "10000000009", new(1972, 6, 15),  Gender.Erkek, BloodType.ARhPositive,  InsuranceType.SGK,     "05321112209", "hasan.tekin@example.com",    "İzmir",     "Bornova",      "Erzene Mah., Üniversite Cad. No:97 D:6",        "Fatma Tekin (Eş)",   "05331114409", "Yok",           "Hipertansiyon, Hiperlipidemi"),
+            P("Hatice",  "Güneş",    "10000000010", new(1988, 4, 8),   Gender.Kadın, BloodType.BRhPositive,  InsuranceType.SGK,     "05321112210", "hatice.gunes@example.com",   "İstanbul",  "Şişli",        "Mecidiyeköy Mah., Büyükdere Cad. No:236 D:14",  "İbrahim Güneş (Eş)", "05331114410", "Yok",           "Hipotiroidi"),
+            P("İbrahim", "Korkmaz",  "10000000011", new(1960, 10, 20), Gender.Erkek, BloodType.ORhPositive,  InsuranceType.SGK,     "05321112211", "ibrahim.korkmaz@example.com","Konya",     "Selçuklu",     "Sancak Mah., Mevlana Cad. No:155 D:2",          "Ayşe Korkmaz (Eş)",  "05331114411", "Yok",           "Koroner arter hastalığı, Hipertansiyon"),
+            P("Elif",    "Bulut",    "10000000012", new(2003, 8, 14),  Gender.Kadın, BloodType.ARhPositive,  InsuranceType.SGK,     "05321112212", "elif.bulut@example.com",     "İstanbul",  "Bakırköy",     "Yeşilköy Mah., İstasyon Cad. No:18 D:7",        "Murat Bulut (Baba)", "05331114412", "Polen",         "Alerjik rinit"),
+            P("Osman",   "Ergin",    "10000000013", new(1975, 1, 27),  Gender.Erkek, BloodType.ABRhNegative, InsuranceType.Ozel,    "05321112213", "osman.ergin@example.com",    "Ankara",    "Yenimahalle",  "Demetevler Mah., 25. Cadde No:64 D:10",         "Selin Ergin (Eş)",   "05331114413", "İbuprofen",     "Gastrit"),
+            P("Merve",   "Keskin",   "10000000014", new(1992, 11, 9),  Gender.Kadın, BloodType.BRhPositive,  InsuranceType.SGK,     "05321112214", "merve.keskin@example.com",   "Adana",     "Seyhan",       "Reşatbey Mah., Atatürk Cad. No:88 D:5",         "Burak Keskin (Eş)",  "05331114414", "Yok",           "Yok"),
+            P("Yusuf",   "Aslan",    "10000000015", new(1987, 7, 2),   Gender.Erkek, BloodType.ORhNegative,  InsuranceType.SGK,     "05321112215", "yusuf.aslan@example.com",    "Gaziantep", "Şahinbey",     "İncilikaya Mah., Üniversite Bulvarı No:142 D:8","Ayşe Aslan (Eş)",    "05331114415", "Yok",           "Yok"),
+            P("Sevgi",   "Duran",    "10000000016", new(1999, 3, 28),  Gender.Kadın, BloodType.ORhPositive,  InsuranceType.Yok,     "05321112216", "sevgi.duran@example.com",    "İstanbul",  "Pendik",       "Çamçeşme Mah., Ankara Cad. No:204 D:3",         "Mehmet Duran (Baba)","05331114416", "Yok",           "Yok"),
+            P("Kemal",   "Sarı",     "10000000017", new(1968, 5, 17),  Gender.Erkek, BloodType.ARhNegative,  InsuranceType.SGK,     "05321112217", "kemal.sari@example.com",     "Trabzon",   "Ortahisar",    "Çukurçayır Mah., Devlet Sahil Yolu No:74 D:6",  "Hatice Sarı (Eş)",   "05331114417", "Yok",           "Hipertansiyon, KOAH"),
+            P("Dilek",   "Aktaş",    "10000000018", new(1994, 9, 4),   Gender.Kadın, BloodType.ABRhPositive, InsuranceType.Ozel,    "05321112218", "dilek.aktas@example.com",    "İstanbul",  "Maltepe",      "Cevizli Mah., Bağdat Cad. No:412 D:9",          "Emre Aktaş (Eş)",    "05331114418", "Yok",           "Yok"),
+            P("John",    "Mitchell", "99100000019", new(1980, 5, 14),  Gender.Erkek, BloodType.ORhPositive,  InsuranceType.Yabanci, "05321112219", "john.mitchell@example.com",  "İstanbul",  "Beşiktaş",     "Etiler Mah., Nispetiye Cad. No:75 D:9",         "Sarah Mitchell (Eş)","05331114419", "Yok",           "Yok"),
+            P("Maria",   "Rossi",    "99100000020", new(1985, 9, 22),  Gender.Kadın, BloodType.ARhNegative,  InsuranceType.Yabanci, "05321112220", "maria.rossi@example.com",    "İzmir",     "Konak",        "Alsancak Mah., Cumhuriyet Bulvarı No:174 D:7",  "Marco Rossi (Eş)",   "05331114420", "Yok",           "Hipertansiyon"),
+        };
+    }
+
+    private static async Task MigratePatientIdentitiesAsync(AppDbContext context)
+    {
+        // Mevcut DB'de Türk kimlikli olan iki kayıt artık yabancı uyruklu hastalara
+        // dönüştürülüyor: TC No → YKN (99 ile başlayan), ad-soyad da güncelleniyor.
+        // Idempotent: yeni YKN zaten DB'de varsa atlanır, böylece tekrar çalıştırmak güvenli.
+        var migrations = new[]
+        {
+            new { OldNationalId = "10000000019", NewNationalId = "99100000019", NewName = "John",  NewSurname = "Mitchell" },
+            new { OldNationalId = "10000000020", NewNationalId = "99100000020", NewName = "Maria", NewSurname = "Rossi"    },
         };
 
-        return data.Select((p, i) => new Patient
+        var changed = false;
+        foreach (var m in migrations)
         {
-            ProtocolNumber = $"P-{(i + 1):D6}",
-            Name = p.Name,
-            Surname = p.Surname,
-            NationalId = p.NationalId,
-            BirthDate = DateTime.SpecifyKind(p.BirthDate, DateTimeKind.Utc),
-            Gender = p.Gender,
-            BloodType = p.Blood,
-            InsuranceType = p.Insurance,
-            Phone = p.Phone,
-            Email = p.Email,
-            City = p.City,
-            District = p.District
-        }).ToList();
+            if (await context.Patients.AnyAsync(x => x.NationalId == m.NewNationalId)) continue;
+
+            var p = await context.Patients.FirstOrDefaultAsync(x => x.NationalId == m.OldNationalId);
+            if (p == null) continue;
+
+            p.NationalId = m.NewNationalId;
+            p.Name = m.NewName;
+            p.Surname = m.NewSurname;
+            changed = true;
+        }
+
+        if (changed) await context.SaveChangesAsync();
+    }
+
+    private static async Task BackfillPatientDetailsAsync(AppDbContext context, List<Patient> seedPatients)
+    {
+        var existing = await context.Patients.ToListAsync();
+        var bySeedNationalId = seedPatients.ToDictionary(p => p.NationalId);
+        var changed = false;
+
+        foreach (var patient in existing)
+        {
+            if (!bySeedNationalId.TryGetValue(patient.NationalId, out var seed)) continue;
+
+            if (string.IsNullOrWhiteSpace(patient.Address) && !string.IsNullOrWhiteSpace(seed.Address))
+            { patient.Address = seed.Address; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.EmergencyContactName) && !string.IsNullOrWhiteSpace(seed.EmergencyContactName))
+            { patient.EmergencyContactName = seed.EmergencyContactName; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.EmergencyContactPhone) && !string.IsNullOrWhiteSpace(seed.EmergencyContactPhone))
+            { patient.EmergencyContactPhone = seed.EmergencyContactPhone; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.Allergies) && !string.IsNullOrWhiteSpace(seed.Allergies))
+            { patient.Allergies = seed.Allergies; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.ChronicDiseases) && !string.IsNullOrWhiteSpace(seed.ChronicDiseases))
+            { patient.ChronicDiseases = seed.ChronicDiseases; changed = true; }
+
+            if (!patient.BloodType.HasValue && seed.BloodType.HasValue)
+            { patient.BloodType = seed.BloodType; changed = true; }
+
+            // InsuranceType enum default is SGK — treat that as "not yet set"
+            // and overwrite with the seed value when it differs. Manual edits
+            // to non-SGK values are preserved.
+            if (patient.InsuranceType == InsuranceType.SGK && seed.InsuranceType != InsuranceType.SGK)
+            { patient.InsuranceType = seed.InsuranceType; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.Email) && !string.IsNullOrWhiteSpace(seed.Email))
+            { patient.Email = seed.Email; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.City) && !string.IsNullOrWhiteSpace(seed.City))
+            { patient.City = seed.City; changed = true; }
+
+            if (string.IsNullOrWhiteSpace(patient.District) && !string.IsNullOrWhiteSpace(seed.District))
+            { patient.District = seed.District; changed = true; }
+        }
+
+        if (changed) await context.SaveChangesAsync();
     }
 
     private static List<Appointment> SeedAppointments(List<Doctor> doctors, List<Patient> patients)

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import { KeyRound } from "lucide-react";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { FormField } from "./ui/FormField";
@@ -59,6 +60,7 @@ export function ChangePasswordModal({ open, onClose }: Props) {
     <Modal
       open={open}
       onClose={onClose}
+      icon={KeyRound}
       title="Şifre Değiştir"
       description="Mevcut şifrenizi onaylayıp yeni şifre belirleyin."
       size="sm"

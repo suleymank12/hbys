@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { User, Phone, Stethoscope } from "lucide-react";
+import { User, Phone, Stethoscope, UserPlus, UserCog } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { FormField } from "../../components/ui/FormField";
@@ -142,6 +142,7 @@ export function PatientFormModal({ open, patient, onClose, onSubmit }: Props) {
     <Modal
       open={open}
       onClose={onClose}
+      icon={isEdit ? UserCog : UserPlus}
       title={isEdit ? "Hasta Bilgilerini Düzenle" : "Yeni Hasta Ekle"}
       description={
         isEdit

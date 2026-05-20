@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HeartPulse, Mail, Lock, ShieldCheck, Activity, Loader2 } from "lucide-react";
@@ -10,6 +10,10 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = "Giriş Yap · MediCore HBYS";
+  }, []);
 
   const {
     register,
@@ -55,7 +59,7 @@ export function LoginPage() {
               <HeartPulse className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="font-bold text-lg leading-tight">Mini HBYS</div>
+              <div className="font-bold text-lg leading-tight">MediCore HBYS</div>
               <div className="text-xs text-white/75 leading-tight">
                 Hastane Bilgi Yönetim Sistemi
               </div>
@@ -95,7 +99,7 @@ export function LoginPage() {
           </div>
 
           <div className="relative text-xs text-white/60">
-            © 2026 Mini HBYS · Tüm hakları saklıdır
+            © 2026 MediCore HBYS · Tüm hakları saklıdır
           </div>
         </div>
 
@@ -105,7 +109,7 @@ export function LoginPage() {
               <HeartPulse className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-bold text-slate-900 leading-tight">Mini HBYS</div>
+              <div className="font-bold text-slate-900 leading-tight">MediCore HBYS</div>
               <div className="text-xs text-slate-500 leading-tight">
                 Hastane Bilgi Yönetim Sistemi
               </div>

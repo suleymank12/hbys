@@ -211,7 +211,7 @@ export function PatientFilePage() {
                       ${
                         active
                           ? "border-medical-600 text-medical-700"
-                          : "border-transparent text-slate-600 hover:text-slate-900"
+                          : "border-transparent text-slate-600 hover:text-medical-700 hover:border-medical-200"
                       }
                     `}
                   >

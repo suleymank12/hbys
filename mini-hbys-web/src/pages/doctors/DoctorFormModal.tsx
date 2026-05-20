@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Stethoscope } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { FormField } from "../../components/ui/FormField";
@@ -187,6 +187,7 @@ export function DoctorFormModal({
     <Modal
       open={open}
       onClose={onClose}
+      icon={Stethoscope}
       title={isEdit ? "Doktor Bilgilerini Düzenle" : "Yeni Doktor Ekle"}
       description={
         isEdit
